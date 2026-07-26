@@ -16,8 +16,7 @@ Plug :: struct {
 	handle: dynlib.Library,
 }
 
-plug_load :: proc(plug: ^Plug, plug_source_file_path: string = "plug.odin") ->
-bool {
+plug_load :: proc(plug: ^Plug, plug_source_file_path: string = "plug.odin") -> bool {
 	if !plug_build(plug_source_file_path, OUTPUT_FILE_PATH) do return false
 
 	count, ok := dynlib.initialize_symbols(plug, OUTPUT_FILE_PATH, handle_field_name = "handle")
@@ -27,18 +26,18 @@ bool {
 	}
 
 	fmt.printfln("successfully loaded the plug, elements count: %i", count)
-    return true
+	return true
 }
 
 
 plug_reload :: proc(plug: ^Plug, plug_source_file_path: string = "plug.odin") -> bool {
-    if !plug_build(plug_source_file_path, OUTPUT_FILE_PATH) {
+	if !plug_build(plug_source_file_path, OUTPUT_FILE_PATH) {
 		return false
 	}
 
-    plug_unload(plug)
+	plug_unload(plug)
 
-    return plug_load(plug, plug_source_file_path)
+	return plug_load(plug, plug_source_file_path)
 }
 
 plug_unload :: proc(plug: ^Plug) {
@@ -72,6 +71,7 @@ plug_build :: proc(plug_source_file_path: string, output_file_path: string) -> b
 				"odin",
 				"build",
 				plug_source_file_path,
+				"-define:RAYLIB_SHARED=true",
 				"-file",
 				"-build-mode:shared",
 				out_argument,

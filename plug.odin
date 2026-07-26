@@ -1,5 +1,6 @@
 package plug
 
+import rl "vendor:raylib"
 import "core:fmt"
 
 @(export)
@@ -9,12 +10,11 @@ init :: proc() {
 
 @(export)
 update :: proc() {
-    fmt.println("[plug] update")
 }
 
 @(export)
 draw :: proc() {
-    fmt.println("[plug] draw")
+    rl.ClearBackground(rl.WHITE)
 }
 
 @(export)

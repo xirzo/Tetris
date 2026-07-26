@@ -4,6 +4,7 @@ import "core:fmt"
 import "core:os"
 import "core:time"
 import h "hotreload"
+import rl "vendor:raylib"
 
 PLUG_SOURCE_PATH :: "plug.odin"
 
@@ -12,6 +13,10 @@ main :: proc() {
 
 	if !h.plug_load(&plug, PLUG_SOURCE_PATH) do os.exit(1)
 	defer h.plug_unload(&plug)
+
+    rl.InitWindow(900, 600, "Tetris")
+    defer rl.CloseWindow()
+    rl.SetTargetFPS(60)
 
 	plug.init()
 
@@ -22,7 +27,7 @@ main :: proc() {
 
 	fmt.println("[main] starting main loop. edit plug.odin to trigger a reload...")
 
-	for {
+	for !rl.WindowShouldClose() {
 		current_write_time, check_err := os.last_write_time_by_name(PLUG_SOURCE_PATH)
 
 		if check_err == os.ERROR_NONE && time.diff(last_write_time, current_write_time) > 0 {
@@ -39,8 +44,8 @@ main :: proc() {
 
 		plug.update()
 
+        rl.BeginDrawing()
 		plug.draw()
-
-		time.sleep(time.Millisecond * 16)
+        rl.EndDrawing()
 	}
 }
