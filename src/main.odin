@@ -10,15 +10,24 @@ PLUG_SOURCE_PATH :: "plug.odin"
 
 main :: proc() {
 	plug: h.Plug
+	state: rawptr = nil
 
 	if !h.plug_load(&plug, PLUG_SOURCE_PATH) do os.exit(1)
 	defer h.plug_unload(&plug)
 
-    rl.InitWindow(900, 600, "Tetris")
-    defer rl.CloseWindow()
-    rl.SetTargetFPS(60)
+	rl.InitWindow(900, 600, "Tetris")
+	defer rl.CloseWindow()
+	rl.SetTargetFPS(60)
 
-	plug.init()
+	plug.init(&state, context)
+
+	defer {
+		plug.shutdown(&state, context)
+		if state != nil {
+			fmt.println("[main] freeing game memory...")
+			free(state)
+		}
+	}
 
 	last_write_time, err := os.last_write_time_by_name(PLUG_SOURCE_PATH)
 	if err != os.ERROR_NONE {
@@ -30,22 +39,23 @@ main :: proc() {
 	for !rl.WindowShouldClose() {
 		current_write_time, check_err := os.last_write_time_by_name(PLUG_SOURCE_PATH)
 
-		if check_err == os.ERROR_NONE && time.diff(last_write_time, current_write_time) > 0 {
+		if check_err == os.ERROR_NONE && time.diff(last_write_time,
+            current_write_time) > 0|| rl.IsKeyPressed(rl.KeyboardKey.SPACE) {
 			fmt.println("\n[main] changes detected! recompiling...")
 
-			plug.deinit()
+			plug.deinit(&state, context)
 
 			if !h.plug_reload(&plug, PLUG_SOURCE_PATH) do os.exit(1)
 
-			plug.init()
+			plug.init(&state, context)
 
 			last_write_time = current_write_time
 		}
 
-		plug.update()
-
-        rl.BeginDrawing()
-		plug.draw()
-        rl.EndDrawing()
+		plug.update(state, context)
+		
+		rl.BeginDrawing()
+		plug.draw(state, context)
+		rl.EndDrawing()
 	}
 }
