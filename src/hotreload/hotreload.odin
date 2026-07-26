@@ -28,7 +28,7 @@ plug_load :: proc(plug: ^Plug, plug_source_file_path: string = "plug.odin") -> b
 		return false
 	}
 
-	fmt.printfln("successfully loaded the plug, elements count: %i", count)
+	fmt.printfln("[hotreload] successfully loaded the plug, elements count: %i", count)
 	return true
 }
 
@@ -49,7 +49,7 @@ plug_unload :: proc(plug: ^Plug) {
 	}
 
 	if !dynlib.unload_library(plug.handle) {
-		fmt.eprintfln("failed to unload the plug, error: %v", dynlib.last_error())
+		fmt.eprintfln("[hotreload] failed to unload the plug, error: %v", dynlib.last_error())
 	}
 
 	plug.handle = nil
@@ -64,7 +64,7 @@ plug_unload :: proc(plug: ^Plug) {
 plug_build :: proc(plug_source_file_path: string, output_file_path: string) -> bool {
 	out_argument, alloc_err := strings.concatenate([]string{"-out:", output_file_path})
 	if alloc_err != runtime.Allocator_Error.None {
-		fmt.eprintfln("failed to allocate out argument, error: %v", alloc_err)
+		fmt.eprintfln("[hotreload] failed to allocate out argument, error: %v", alloc_err)
 		return false
 	}
 	defer delete(out_argument)
@@ -85,7 +85,7 @@ plug_build :: proc(plug_source_file_path: string, output_file_path: string) -> b
 	)
 
 	if state.exit_code != 0 {
-		fmt.eprintfln("failed to build the plug, error code: %i", state.exit_code)
+		fmt.eprintfln("[hotreload] failed to build the plug, error code: %i", state.exit_code)
 		fmt.eprintfln("%s", stderr)
 		return false
 	}

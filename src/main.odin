@@ -15,7 +15,8 @@ main :: proc() {
 	if !h.plug_load(&plug, PLUG_SOURCE_PATH) do os.exit(1)
 	defer h.plug_unload(&plug)
 
-	rl.InitWindow(900, 600, "Tetris")
+    rl.SetTraceLogLevel(rl.TraceLogLevel.ERROR)
+	rl.InitWindow(600, 900, "Tetris")
 	defer rl.CloseWindow()
 	rl.SetTargetFPS(60)
 
@@ -41,7 +42,7 @@ main :: proc() {
 
 		if check_err == os.ERROR_NONE && time.diff(last_write_time,
             current_write_time) > 0|| rl.IsKeyPressed(rl.KeyboardKey.SPACE) {
-			fmt.println("\n[main] changes detected! recompiling...")
+			fmt.println("[main] changes detected! recompiling...")
 
 			plug.deinit(&state, context)
 
