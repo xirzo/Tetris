@@ -4,6 +4,8 @@ import "base:runtime"
 import "core:fmt"
 import rl "vendor:raylib"
 
+TETROMINO_SIDE :: 4
+
 IMAGE_SOURCE_SIZE :: 8
 IMAGE_SPRITE_SCALE :: 4
 IMAGE_DEST_SIZE :: IMAGE_SOURCE_SIZE * IMAGE_SPRITE_SCALE
@@ -38,7 +40,7 @@ TETROMINO_SHAPES: [TetrominoShape]Shape_Grid = {
 	.Z = {{1, 1, 0, 0}, {0, 1, 1, 0}, {0, 0, 0, 0}, {0, 0, 0, 0}},
 }
 
-Shape_Grid :: [4][4]u8
+Shape_Grid :: [TETROMINO_SIDE][TETROMINO_SIDE]u8
 
 TetrominoShape :: enum {
 	I,
@@ -74,6 +76,8 @@ Game_State :: struct {
 	active_grid:        Shape_Grid,
 	active_x:           i32,
 	active_y:           i32,
+	active_move_delay:  f32,
+	active_move_timer:  f32,
 }
 
 @(export)
@@ -110,6 +114,9 @@ game_init :: proc(state: ^rawptr, ctx: runtime.Context) {
 	game_state.level = 1
 	game_state.lines = 0
 
+	game_state.active_move_delay = 1
+	game_state.active_move_timer = 0
+
 	for x in 0 ..< COLS_COUNT {
 		for y in 0 ..< ROWS_COUNT {
 			game_state.cells[x][y] = Cell.Empty
@@ -124,6 +131,8 @@ game_init :: proc(state: ^rawptr, ctx: runtime.Context) {
 game_update :: proc(state: rawptr, ctx: runtime.Context) {
 	context = ctx
 	game_state := cast(^Game_State)state
+
+    update_active_tetromino(game_state)
 }
 
 @(export)
@@ -280,8 +289,8 @@ draw_grid :: proc(game_state: ^Game_State) {
 		)
 	}
 
-	for y in 0 ..< 4 {
-		for x in 0 ..< 4 {
+	for y in 0 ..< TETROMINO_SIDE {
+		for x in 0 ..< TETROMINO_SIDE {
 			if game_state.active_grid[y][x] == 1 {
 
 				board_x := game_state.active_x + cast(i32)x
@@ -290,10 +299,26 @@ draw_grid :: proc(game_state: ^Game_State) {
 				pos_x := START_X + (cast(f32)board_x * IMAGE_DEST_SIZE)
 				pos_y := START_Y + (cast(f32)board_y * IMAGE_DEST_SIZE)
 
-				draw_atlas_texture(game_state, TEXTURE_OFFSETS[.Tetromino], rl.Vector2{pos_x, pos_y})
+				draw_atlas_texture(
+					game_state,
+					TEXTURE_OFFSETS[.Tetromino],
+					rl.Vector2{pos_x, pos_y},
+				)
 			}
 		}
 	}
+}
+
+update_active_tetromino :: proc(game_state: ^Game_State) {
+	if game_state.active_move_timer < game_state.active_move_delay {
+		game_state.active_move_timer += rl.GetFrameTime()
+		return
+	}
+
+    // if reached the blocked -> stopping
+
+	game_state.active_move_timer = 0
+	game_state.active_y += 1
 }
 
 spawn_tetromino :: proc(game_state: ^Game_State, shape: TetrominoShape) {

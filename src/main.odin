@@ -31,18 +31,20 @@ main :: proc() {
 		}
 	}
 
-	last_write_time, err := os.last_write_time_by_name(PLUG_SOURCE_PATH)
-	if err != os.ERROR_NONE {
-		fmt.eprintfln("[main] [warn] could not get initial write time: %v", err)
-	}
+	// last_write_time, err := os.last_write_time_by_name(PLUG_SOURCE_PATH)
+	// if err != os.ERROR_NONE {
+	// 	fmt.eprintfln("[main] [warn] could not get initial write time: %v", err)
+	// }
 
-	fmt.println("[main] starting main loop. edit plug.odin to trigger a reload...")
+	// fmt.println("[main] starting main loop. edit plug.odin to trigger a reload...")
 
 	for !rl.WindowShouldClose() {
 		current_write_time, check_err := os.last_write_time_by_name(PLUG_SOURCE_PATH)
 
-		if check_err == os.ERROR_NONE && time.diff(last_write_time,
-            current_write_time) > 0|| rl.IsKeyPressed(rl.KeyboardKey.SPACE) {
+		// if check_err == os.ERROR_NONE && time.diff(last_write_time,
+            // current_write_time) > 0|| rl.IsKeyPressed(rl.KeyboardKey.SPACE) {
+
+		if rl.IsKeyPressed(rl.KeyboardKey.SPACE) {
 			fmt.println("[main] changes detected! recompiling...")
 
 			plug.deinit(&state, context)
@@ -51,7 +53,7 @@ main :: proc() {
 
 			plug.init(&state, context)
 
-			last_write_time = current_write_time
+			// last_write_time = current_write_time
 		}
 
 		plug.update(state, context)
