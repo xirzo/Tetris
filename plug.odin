@@ -1,5 +1,6 @@
 package plug
 
+// TODO: do not spawn tetromino after losing (locking the top shelf)
 // TODO: add restart game button
 
 import "base:runtime"
@@ -139,9 +140,85 @@ game_update :: proc(state: rawptr, ctx: runtime.Context) {
 	context = ctx
 	game_state := cast(^Game_State)state
 
+	update_input_and_move(game_state)
 	update_active_tetromino(game_state)
 	update_lost_condition(game_state)
 }
+
+// TODO: refactor initialization of left
+get_most_left_active_board_x :: proc(game_state: ^Game_State) -> i32 {
+	left: i32 = 0
+
+	for y in 0 ..< TETROMINO_SIDE {
+		for x in 0 ..< TETROMINO_SIDE {
+			if game_state.active_grid[y][x] != 1 {
+				continue
+			}
+
+			board_x := game_state.active_x + cast(i32)x
+			left = board_x
+            break
+		}
+	}
+	for y in 0 ..< TETROMINO_SIDE {
+		for x in 0 ..< TETROMINO_SIDE {
+			if game_state.active_grid[y][x] != 1 {
+				continue
+			}
+
+			board_x := game_state.active_x + cast(i32)x
+			left = min(board_x, left)
+		}
+	}
+
+	return left
+}
+
+// TODO: refactor initialization of right
+get_most_right_active_board_x :: proc(game_state: ^Game_State) -> i32 {
+	right: i32 = 0
+
+	for y in 0 ..< TETROMINO_SIDE {
+		for x in 0 ..< TETROMINO_SIDE {
+			if game_state.active_grid[y][x] != 1 {
+				continue
+			}
+
+			board_x := game_state.active_x + cast(i32)x
+			right = board_x
+            break
+		}
+	}
+
+	for y in 0 ..< TETROMINO_SIDE {
+		for x in 0 ..< TETROMINO_SIDE {
+			if game_state.active_grid[y][x] != 1 {
+				continue
+			}
+
+			board_x := game_state.active_x + cast(i32)x
+			right = max(board_x, right)
+		}
+	}
+
+	return right
+}
+
+update_input_and_move :: proc(game_state: ^Game_State) {
+	input: i32
+
+	if rl.IsKeyPressed(rl.KeyboardKey.A) || rl.IsKeyPressed(rl.KeyboardKey.LEFT) do input = -1
+	if rl.IsKeyPressed(rl.KeyboardKey.D) || rl.IsKeyPressed(rl.KeyboardKey.RIGHT) do input = 1
+
+	most_left := get_most_left_active_board_x(game_state)
+	most_right := get_most_right_active_board_x(game_state)
+
+	if most_left + input >= 0 && most_right + input < COLS_COUNT {
+		game_state.active_x += input
+		return
+	}
+}
+
 
 // TODO: extend the grid and allow placing above
 update_lost_condition :: proc(game_state: ^Game_State) {
@@ -375,8 +452,8 @@ update_active_tetromino :: proc(game_state: ^Game_State) {
 	if does_active_touch_bottom(game_state) {
 		lock_active_tetromino(game_state)
 
-        // BUG: move this out of here, this produces a bug when lost, new
-        // tetromino is spawned on locked one
+		// BUG: move this out of here, this produces a bug when lost, new
+		// tetromino is spawned on locked one
 		if !game_state.has_lost {
 			spawn_tetromino(game_state, TetrominoShape.I)
 		}
@@ -388,7 +465,7 @@ update_active_tetromino :: proc(game_state: ^Game_State) {
 }
 
 spawn_tetromino :: proc(game_state: ^Game_State, shape: TetrominoShape) {
-    // TODO: check if space is already locked? or extend the grid
+	// TODO: check if space is already locked? or extend the grid
 	game_state.active_shape = shape
 	game_state.active_grid = TETROMINO_SHAPES[shape]
 
