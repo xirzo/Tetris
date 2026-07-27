@@ -9,14 +9,17 @@ IMAGE_SPRITE_SCALE :: 4
 IMAGE_DEST_SIZE :: IMAGE_SOURCE_SIZE * IMAGE_SPRITE_SCALE
 
 ATLAS_TEXTURE_PATH :: "assets/atlas.png"
+FONT_TEXTURE_PATH :: "assets/vcr_osd_mono.ttf"
 
-COLS_COUNT :: 10
-ROWS_COUNT :: 20
+COLS_COUNT :: 12
+ROWS_COUNT :: 21
 
 GAME_WIDTH :: 1920
 GAME_HEIGHT :: 1080
 
 BACKGROUND_COLOR :: rl.Color{34, 35, 35, 255}
+
+DEBUG_BUILD :: true
 
 texture_offsets := [Cell]rl.Vector2 {
 	.Wall    = rl.Vector2{0, 0},
@@ -31,10 +34,13 @@ Cell :: enum {
 }
 
 Game_State :: struct {
-	atlas:          rl.Texture,
-	score:          int,
-	cells:          [COLS_COUNT][ROWS_COUNT]Cell,
-	target_texture: rl.RenderTexture,
+	atlas:              rl.Texture,
+	score:              int,
+	cells:              [COLS_COUNT][ROWS_COUNT]Cell,
+	target_texture:     rl.RenderTexture,
+	debug_font:         rl.Font,
+	debug_font_size:    f32,
+	debug_font_spacing: f32,
 }
 
 @(export)
@@ -58,6 +64,9 @@ game_init :: proc(state: ^rawptr, ctx: runtime.Context) {
 	game_state.atlas = atlas
 	game_state.score = 0
 	game_state.target_texture = rl.LoadRenderTexture(GAME_WIDTH, GAME_HEIGHT)
+	game_state.debug_font_size = 32
+	game_state.debug_font_spacing = 2
+	game_state.debug_font = rl.LoadFont(FONT_TEXTURE_PATH)
 
 	for x in 1 ..< COLS_COUNT - 1 {
 		for y in 0 ..< ROWS_COUNT - 1 {
@@ -82,10 +91,21 @@ game_draw :: proc(state: rawptr, ctx: runtime.Context) {
 
 	rl.BeginTextureMode(game_state.target_texture)
 	rl.ClearBackground(BACKGROUND_COLOR)
-    draw_grid(game_state)
+	draw_grid(game_state)
+
+	when DEBUG_BUILD do rl.DrawTextEx(
+		game_state.debug_font,
+		"DEBUG_BUILD=ON",
+		rl.Vector2{10, 10},
+		game_state.debug_font_size,
+		game_state.debug_font_spacing,
+		rl.WHITE,
+	)
+
 	rl.EndTextureMode()
 
 	rl.BeginDrawing()
+
 	rl.ClearBackground(rl.BLACK)
 
 	screen_w := cast(f32)rl.GetScreenWidth()
@@ -112,7 +132,6 @@ game_draw :: proc(state: rawptr, ctx: runtime.Context) {
 		rl.WHITE,
 	)
 
-
 	rl.EndDrawing()
 }
 
@@ -136,29 +155,27 @@ game_shutdown :: proc(state: ^rawptr, ctx: runtime.Context) {
 
 	rl.UnloadTexture(game_state.atlas)
 	rl.UnloadRenderTexture(game_state.target_texture)
+	rl.UnloadFont(game_state.debug_font)
 
 	fmt.println("[plug] full shutdown complete")
 }
 
 draw_grid :: proc(game_state: ^Game_State) {
-    GRID_PIXEL_WIDTH :: COLS_COUNT * IMAGE_DEST_SIZE
-    GRID_PIXEL_HEIGHT :: ROWS_COUNT * IMAGE_DEST_SIZE
+	GRID_PIXEL_WIDTH :: COLS_COUNT * IMAGE_DEST_SIZE
+	GRID_PIXEL_HEIGHT :: ROWS_COUNT * IMAGE_DEST_SIZE
 
-    START_X :: (GAME_WIDTH - GRID_PIXEL_WIDTH) * 0.5
-    START_Y :: (GAME_HEIGHT - GRID_PIXEL_HEIGHT) * 0.5
+	START_X :: (GAME_WIDTH - GRID_PIXEL_WIDTH) * 0.5
+	START_Y :: (GAME_HEIGHT - GRID_PIXEL_HEIGHT) * 0.5
 
 	for x in 0 ..< COLS_COUNT {
 		for y in 0 ..< ROWS_COUNT {
-            pos_x := START_X + (x * IMAGE_DEST_SIZE)
-            pos_y := START_Y + (y * IMAGE_DEST_SIZE)
+			pos_x := START_X + (x * IMAGE_DEST_SIZE)
+			pos_y := START_Y + (y * IMAGE_DEST_SIZE)
 
 			draw_atlas_texture(
 				game_state,
 				texture_offsets[game_state.cells[x][y]],
-				rl.Vector2 {
-                    cast(f32)pos_x,
-                    cast(f32)pos_y
-				},
+				rl.Vector2{cast(f32)pos_x, cast(f32)pos_y},
 			)
 		}
 	}
