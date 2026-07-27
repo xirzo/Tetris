@@ -35,12 +35,17 @@ Cell :: enum {
 
 Game_State :: struct {
 	atlas:              rl.Texture,
-	score:              int,
 	cells:              [COLS_COUNT][ROWS_COUNT]Cell,
 	target_texture:     rl.RenderTexture,
 	debug_font:         rl.Font,
 	debug_font_size:    f32,
 	debug_font_spacing: f32,
+	font:               rl.Font,
+	font_size:          f32,
+	font_spacing:       f32,
+	score:              i32,
+	level:              i32,
+	lines:              i32,
 }
 
 @(export)
@@ -62,11 +67,18 @@ game_init :: proc(state: ^rawptr, ctx: runtime.Context) {
 	}
 
 	game_state.atlas = atlas
-	game_state.score = 0
 	game_state.target_texture = rl.LoadRenderTexture(GAME_WIDTH, GAME_HEIGHT)
 	game_state.debug_font_size = 32
 	game_state.debug_font_spacing = 2
 	game_state.debug_font = rl.LoadFont(FONT_TEXTURE_PATH)
+
+	game_state.font_size = 32
+	game_state.font_spacing = 2
+	game_state.font = rl.LoadFont(FONT_TEXTURE_PATH)
+
+	game_state.score = 0
+	game_state.level = 1
+	game_state.lines = 0
 
 	for x in 1 ..< COLS_COUNT - 1 {
 		for y in 0 ..< ROWS_COUNT - 1 {
@@ -93,9 +105,10 @@ game_draw :: proc(state: rawptr, ctx: runtime.Context) {
 	rl.ClearBackground(BACKGROUND_COLOR)
 	draw_grid(game_state)
 
+	draw_game_info(game_state, rl.Vector2{GAME_WIDTH * 0.3, GAME_HEIGHT * 0.55})
 	when DEBUG_BUILD do rl.DrawTextEx(
 		game_state.debug_font,
-		"DEBUG_BUILD=ON",
+		"DEVELOPMENT_BUILD",
 		rl.Vector2{10, 10},
 		game_state.debug_font_size,
 		game_state.debug_font_spacing,
@@ -106,7 +119,7 @@ game_draw :: proc(state: rawptr, ctx: runtime.Context) {
 
 	rl.BeginDrawing()
 
-	rl.ClearBackground(rl.BLACK)
+	rl.ClearBackground(BACKGROUND_COLOR)
 
 	screen_w := cast(f32)rl.GetScreenWidth()
 	screen_h := cast(f32)rl.GetScreenHeight()
@@ -156,8 +169,39 @@ game_shutdown :: proc(state: ^rawptr, ctx: runtime.Context) {
 	rl.UnloadTexture(game_state.atlas)
 	rl.UnloadRenderTexture(game_state.target_texture)
 	rl.UnloadFont(game_state.debug_font)
+	rl.UnloadFont(game_state.font)
 
 	fmt.println("[plug] full shutdown complete")
+}
+
+
+draw_game_info :: proc(game_state: ^Game_State, position: rl.Vector2) {
+	rl.DrawTextEx(
+		game_state.font,
+		rl.TextFormat("LINES\n    %i", game_state.lines),
+		rl.Vector2{position.x, position.y},
+		game_state.font_size,
+		game_state.font_spacing,
+		rl.WHITE,
+	)
+
+	rl.DrawTextEx(
+		game_state.font,
+		rl.TextFormat("LEVEL\n    %i", game_state.level),
+		rl.Vector2{position.x, position.y + 100},
+		game_state.font_size,
+		game_state.font_spacing,
+		rl.WHITE,
+	)
+
+	rl.DrawTextEx(
+		game_state.font,
+		rl.TextFormat("SCORE\n    %i", game_state.score),
+		rl.Vector2{position.x, position.y + 200},
+		game_state.font_size,
+		game_state.font_spacing,
+		rl.WHITE,
+	)
 }
 
 draw_grid :: proc(game_state: ^Game_State) {
@@ -179,6 +223,10 @@ draw_grid :: proc(game_state: ^Game_State) {
 			)
 		}
 	}
+}
+
+place_tetromino :: proc(game_state: ^Game_State) {
+
 }
 
 
