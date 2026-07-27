@@ -318,12 +318,35 @@ lock_active_tetromino :: proc(game_state: ^Game_State) {
 				continue
 			}
 
-            board_x := game_state.active_x + cast(i32)x
-            board_y := game_state.active_y + cast(i32)y
+			board_x := game_state.active_x + cast(i32)x
+			board_y := game_state.active_y + cast(i32)y
 
-            game_state.board[board_x][board_y] = Cell.LockedTetromino
+			game_state.board[board_x][board_y] = Cell.LockedTetromino
 		}
 	}
+}
+
+does_active_touch_bottom :: proc(game_state: ^Game_State) -> bool {
+	if game_state.active_y >= ROWS_COUNT - 1 {
+		return true
+	}
+
+	for y in 0 ..< TETROMINO_SIDE {
+		for x in 0 ..< TETROMINO_SIDE {
+			if game_state.active_grid[y][x] != 1 {
+				continue
+			}
+
+			board_x := game_state.active_x + cast(i32)x
+			board_y := game_state.active_y + cast(i32)y
+
+            if game_state.board[board_x][board_y + 1] != Cell.Empty {
+                return true
+            }
+		}
+	}
+
+	return false
 }
 
 update_active_tetromino :: proc(game_state: ^Game_State) {
@@ -332,10 +355,10 @@ update_active_tetromino :: proc(game_state: ^Game_State) {
 		return
 	}
 
-	// TODO: lock if reached the bottom or inactive blocks
-	if game_state.active_y >= ROWS_COUNT - 1 {
+	// TODO: lock if touches the inactive blocks with bottom
+	if does_active_touch_bottom(game_state) {
 		lock_active_tetromino(game_state)
-        spawn_tetromino(game_state, TetrominoShape.I)
+		spawn_tetromino(game_state, TetrominoShape.I)
 	} else {
 		game_state.active_y += 1
 	}
