@@ -104,32 +104,12 @@ game_init :: proc(state: ^rawptr, ctx: runtime.Context) {
 		return
 	}
 
-	spawn_tetromino(game_state, TetrominoShape.I)
-
 	game_state.atlas = atlas
 	game_state.target_texture = rl.LoadRenderTexture(GAME_WIDTH, GAME_HEIGHT)
-	game_state.debug_font_size = 32
-	game_state.debug_font_spacing = 2
 	game_state.debug_font = rl.LoadFont(FONT_TEXTURE_PATH)
-
-	game_state.font_size = 32
-	game_state.font_spacing = 2
 	game_state.font = rl.LoadFont(FONT_TEXTURE_PATH)
 
-	game_state.score = 0
-	game_state.level = 1
-	game_state.lines = 0
-
-	game_state.active_move_delay = 0.001
-	game_state.active_move_timer = 0
-
-	game_state.has_lost = false
-
-	for x in 0 ..< COLS_COUNT {
-		for y in 0 ..< ROWS_COUNT {
-			game_state.board[x][y] = Cell.Empty
-		}
-	}
+	reset_game(game_state)
 
 	state^ = game_state
 	fmt.println("[plug] allocated game_state")
@@ -139,6 +119,8 @@ game_init :: proc(state: ^rawptr, ctx: runtime.Context) {
 game_update :: proc(state: rawptr, ctx: runtime.Context) {
 	context = ctx
 	game_state := cast(^Game_State)state
+
+    when DEBUG_BUILD do if rl.IsKeyPressed(.R) do reset_game(game_state)
 
 	update_input_and_move(game_state)
 	update_active_tetromino(game_state)
@@ -157,7 +139,7 @@ get_most_left_active_board_x :: proc(game_state: ^Game_State) -> i32 {
 
 			board_x := game_state.active_x + cast(i32)x
 			left = board_x
-            break
+			break
 		}
 	}
 	for y in 0 ..< TETROMINO_SIDE {
@@ -186,7 +168,7 @@ get_most_right_active_board_x :: proc(game_state: ^Game_State) -> i32 {
 
 			board_x := game_state.active_x + cast(i32)x
 			right = board_x
-            break
+			break
 		}
 	}
 
@@ -244,6 +226,24 @@ game_draw :: proc(state: rawptr, ctx: runtime.Context) {
 		game_state.debug_font,
 		"DEVELOPMENT_BUILD",
 		rl.Vector2{10, 10},
+		game_state.debug_font_size,
+		game_state.debug_font_spacing,
+		rl.WHITE,
+	)
+
+	when DEBUG_BUILD do rl.DrawTextEx(
+		game_state.debug_font,
+		rl.TextFormat("HAS_LOST: %s", game_state.has_lost ? "TRUE" : "FALSE"),
+		rl.Vector2{10, 10 + game_state.debug_font_size},
+		game_state.debug_font_size,
+		game_state.debug_font_spacing,
+		rl.WHITE,
+	)
+
+	when DEBUG_BUILD do rl.DrawTextEx(
+		game_state.debug_font,
+		"PRESS R TO RESTART",
+		rl.Vector2{10, 10 + 2 * game_state.debug_font_size},
 		game_state.debug_font_size,
 		game_state.debug_font_spacing,
 		rl.WHITE,
@@ -501,4 +501,29 @@ draw_atlas_texture :: proc(
 		0,
 		rl.WHITE,
 	)
+}
+
+reset_game :: proc(game_state: ^Game_State) {
+    game_state.debug_font_size = 32
+    game_state.debug_font_spacing = 2
+
+	game_state.font_size = 32
+	game_state.font_spacing = 2
+
+	game_state.score = 0
+	game_state.level = 1
+	game_state.lines = 0
+
+	game_state.active_move_delay = 0.001
+	game_state.active_move_timer = 0
+
+	game_state.has_lost = false
+
+	for x in 0 ..< COLS_COUNT {
+		for y in 0 ..< ROWS_COUNT {
+			game_state.board[x][y] = Cell.Empty
+		}
+	}
+
+	spawn_tetromino(game_state, .I)
 }
