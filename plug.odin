@@ -1,7 +1,7 @@
 package plug
 
+// TODO: add testing setups (like full map)
 // TODO: do not spawn tetromino after losing (locking the top shelf)
-// TODO: add restart game button
 
 import "base:runtime"
 import "core:fmt"
@@ -121,12 +121,14 @@ game_update :: proc(state: rawptr, ctx: runtime.Context) {
 	game_state := cast(^Game_State)state
 
 	when DEBUG_BUILD do if rl.IsKeyPressed(.R) do reset_game(game_state)
+	when DEBUG_BUILD do if rl.IsKeyPressed(.F1) do set_midgame_state(game_state)
 
 	if game_state.has_lost {
 		if rl.IsKeyPressed(.ENTER) do reset_game(game_state)
 		return
 	}
 
+	clear_lines(game_state)
 	update_movement_input(game_state)
 	update_rotation_input(game_state)
 	update_active_tetromino(game_state)
@@ -242,6 +244,15 @@ game_draw :: proc(state: rawptr, ctx: runtime.Context) {
 		game_state.debug_font,
 		"PRESS R TO RESTART",
 		rl.Vector2{10, 10 + 2 * game_state.debug_font_size},
+		game_state.debug_font_size,
+		game_state.debug_font_spacing,
+		rl.WHITE,
+	)
+
+	when DEBUG_BUILD do rl.DrawTextEx(
+		game_state.debug_font,
+		"PRESS F1 TO SET MIDGAME",
+		rl.Vector2{10, 10 + 3 * game_state.debug_font_size},
 		game_state.debug_font_size,
 		game_state.debug_font_spacing,
 		rl.WHITE,
@@ -441,6 +452,7 @@ spawn_tetromino :: proc(game_state: ^Game_State, shape: TetrominoShape) {
 	game_state.active_x = 3
 	game_state.active_y = 0
 
+	// TODO: check before spawning
 	if !is_valid_position(game_state, game_state.active_x, game_state.active_y) {
 		game_state.has_lost = true
 	}
@@ -486,4 +498,80 @@ reset_game :: proc(game_state: ^Game_State) {
 	}
 
 	spawn_tetromino(game_state, .I)
+}
+
+set_midgame_state :: proc(game_state: ^Game_State) {
+	game_state.debug_font_size = 32
+	game_state.debug_font_spacing = 2
+
+	game_state.font_size = 32
+	game_state.font_spacing = 2
+
+	game_state.score = 0
+	game_state.level = 1
+	game_state.lines = 0
+
+	game_state.active_move_delay = 0.001
+	game_state.active_move_timer = 0
+
+	game_state.has_lost = false
+
+	for x in 0 ..< COLS_COUNT {
+		for y in 0 ..< ROWS_COUNT {
+			game_state.board[x][y] = Cell.Empty
+		}
+	}
+
+	for x in 0 ..< COLS_COUNT {
+		for y := ROWS_COUNT - 1; y > 5; y -= 1 {
+			game_state.board[x][y] = Cell.LockedTetromino
+		}
+	}
+
+	spawn_tetromino(game_state, .I)
+}
+
+clear_line :: proc(game_state: ^Game_State, y: i32) {
+	for x in 0 ..< COLS_COUNT do game_state.board[x][y] = .Empty
+}
+
+clear_lines :: proc(game_state: ^Game_State) {
+	cleared_lines := 0
+
+	for y := ROWS_COUNT - 1; y >= 0;  {
+		is_full := true
+
+		for x in 0 ..< COLS_COUNT {
+			if game_state.board[x][y] != .LockedTetromino {
+				is_full = false
+				break
+			}
+		}
+
+		if is_full {
+			for shift_y := y; shift_y > 0; shift_y -= 1 {
+				for x in 0 ..< COLS_COUNT {
+					game_state.board[x][shift_y] = game_state.board[x][shift_y - 1]
+				}
+			}
+			clear_line(game_state, 0)
+			cleared_lines += 1
+        } else {
+            y -= 1
+        }
+	}
+
+	if cleared_lines > 0 {
+		game_state.lines += cast(i32)cleared_lines
+		switch cleared_lines {
+		case 1:
+			game_state.score += 100
+		case 2:
+			game_state.score += 300
+		case 3:
+			game_state.score += 500
+		case 4:
+			game_state.score += 800
+		}
+	}
 }
