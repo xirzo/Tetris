@@ -4,17 +4,32 @@ import "base:runtime"
 import "core:fmt"
 import rl "vendor:raylib"
 
-IMAGE_SPRIDE_SIDE :: 8
+IMAGE_SPRITE_SIDE :: 8
 IMAGE_SPRITE_SCALE :: 32
 
 ATLAS_TEXTURE_PATH :: "assets/atlas.png"
 
-WALL_TEXTURE_OFFSET :: rl.Vector2{0, 0}
-WALL_ALT_TEXTURE_OFFSET :: rl.Vector2{8, 0}
+COLS_COUNT :: 10
+ROWS_COUNT :: 20
+
+BACKGROUND_COLOR :: rl.Color{ 34, 35, 35, 255 }
+
+Cell :: enum {
+	Wall,
+	AltWall,
+    Empty,
+}
+
+texture_offsets := [Cell]rl.Vector2 {
+	.Wall    = rl.Vector2{0, 0},
+	.AltWall = rl.Vector2{IMAGE_SPRITE_SIDE, 0},
+    .Empty = rl.Vector2{IMAGE_SPRITE_SIDE * 2, 0}
+}
 
 Game_State :: struct {
 	atlas: rl.Texture,
 	score: int,
+	cells: [COLS_COUNT][ROWS_COUNT]Cell,
 }
 
 @(export)
@@ -27,7 +42,7 @@ game_init :: proc(state: ^rawptr, ctx: runtime.Context) {
 		return
 	}
 
-	tmp := new(Game_State)
+	game_state := new(Game_State)
 
 	atlas := rl.LoadTexture(ATLAS_TEXTURE_PATH)
 	if atlas.id <= 0 {
@@ -35,10 +50,16 @@ game_init :: proc(state: ^rawptr, ctx: runtime.Context) {
 		return
 	}
 
-	tmp.atlas = atlas
-	tmp.score = 0
+	game_state.atlas = atlas
+	game_state.score = 0
 
-	state^ = tmp
+	for x in 1 ..< COLS_COUNT - 1 {
+		for y in 0 ..< ROWS_COUNT - 1 {
+            game_state.cells[x][y] = Cell.Empty
+		}
+	}
+
+	state^ = game_state
 	fmt.println("[plug] allocated game_state")
 }
 
@@ -53,9 +74,24 @@ game_draw :: proc(state: rawptr, ctx: runtime.Context) {
 	context = ctx
 	game_state := cast(^Game_State)state
 
-	rl.ClearBackground(rl.BLACK)
-	draw_atlas_texture(game_state, WALL_TEXTURE_OFFSET, rl.Vector2{50, 50})
-	draw_atlas_texture(game_state, WALL_ALT_TEXTURE_OFFSET, rl.Vector2{100, 50})
+	rl.ClearBackground(BACKGROUND_COLOR)
+
+	x_offset :: 50
+	y_offset :: 50
+
+	for x in 0 ..< COLS_COUNT {
+		for y in 0 ..< ROWS_COUNT {
+
+			draw_atlas_texture(
+				game_state,
+				texture_offsets[game_state.cells[x][y]],
+				rl.Vector2 {
+					x_offset + cast(f32)x * IMAGE_SPRITE_SCALE,
+					y_offset + cast(f32)y * IMAGE_SPRITE_SCALE,
+				},
+			)
+		}
+	}
 }
 
 @(export)
@@ -91,7 +127,7 @@ draw_atlas_texture :: proc(
 
 	rl.DrawTexturePro(
 		game_state.atlas,
-		rl.Rectangle{texture_offset.x, texture_offset.y, IMAGE_SPRIDE_SIDE, IMAGE_SPRIDE_SIDE},
+		rl.Rectangle{texture_offset.x, texture_offset.y, IMAGE_SPRITE_SIDE, IMAGE_SPRITE_SIDE},
 		dest,
 		rl.Vector2{0, 0},
 		0,
