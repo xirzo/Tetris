@@ -24,10 +24,11 @@ BACKGROUND_COLOR :: rl.Color{34, 35, 35, 255}
 DEBUG_BUILD :: true
 
 TEXTURE_OFFSETS := [Cell]rl.Vector2 {
-	.Wall      = rl.Vector2{0, 0},
-	.AltWall   = rl.Vector2{IMAGE_SOURCE_SIZE, 0},
-	.Empty     = rl.Vector2{IMAGE_SOURCE_SIZE * 2, 0},
-	.Tetromino = rl.Vector2{IMAGE_SOURCE_SIZE * 3, 0},
+	.Wall            = rl.Vector2{0, 0},
+	.AltWall         = rl.Vector2{IMAGE_SOURCE_SIZE, 0},
+	.Empty           = rl.Vector2{IMAGE_SOURCE_SIZE * 2, 0},
+	.Tetromino       = rl.Vector2{IMAGE_SOURCE_SIZE * 3, 0},
+	.LockedTetromino = rl.Vector2{IMAGE_SOURCE_SIZE * 4, 0},
 }
 
 TETROMINO_SHAPES: [TetrominoShape]Shape_Grid = {
@@ -57,11 +58,12 @@ Cell :: enum {
 	AltWall,
 	Empty,
 	Tetromino,
+	LockedTetromino,
 }
 
 Game_State :: struct {
 	atlas:              rl.Texture,
-	cells:              [COLS_COUNT][ROWS_COUNT]Cell,
+	board:              [COLS_COUNT][ROWS_COUNT]Cell,
 	target_texture:     rl.RenderTexture,
 	debug_font:         rl.Font,
 	debug_font_size:    f32,
@@ -114,12 +116,12 @@ game_init :: proc(state: ^rawptr, ctx: runtime.Context) {
 	game_state.level = 1
 	game_state.lines = 0
 
-	game_state.active_move_delay = 1
+	game_state.active_move_delay = 0.1
 	game_state.active_move_timer = 0
 
 	for x in 0 ..< COLS_COUNT {
 		for y in 0 ..< ROWS_COUNT {
-			game_state.cells[x][y] = Cell.Empty
+			game_state.board[x][y] = Cell.Empty
 		}
 	}
 
@@ -132,7 +134,7 @@ game_update :: proc(state: rawptr, ctx: runtime.Context) {
 	context = ctx
 	game_state := cast(^Game_State)state
 
-    update_active_tetromino(game_state)
+	update_active_tetromino(game_state)
 }
 
 @(export)
@@ -257,7 +259,7 @@ draw_grid :: proc(game_state: ^Game_State) {
 
 			draw_atlas_texture(
 				game_state,
-				TEXTURE_OFFSETS[game_state.cells[x][y]],
+				TEXTURE_OFFSETS[game_state.board[x][y]],
 				rl.Vector2{pos_x, pos_y},
 			)
 		}
@@ -309,16 +311,36 @@ draw_grid :: proc(game_state: ^Game_State) {
 	}
 }
 
+lock_active_tetromino :: proc(game_state: ^Game_State) {
+	for y in 0 ..< TETROMINO_SIDE {
+		for x in 0 ..< TETROMINO_SIDE {
+			if game_state.active_grid[y][x] != 1 {
+				continue
+			}
+
+            board_x := game_state.active_x + cast(i32)x
+            board_y := game_state.active_y + cast(i32)y
+
+            game_state.board[board_x][board_y] = Cell.LockedTetromino
+		}
+	}
+}
+
 update_active_tetromino :: proc(game_state: ^Game_State) {
 	if game_state.active_move_timer < game_state.active_move_delay {
 		game_state.active_move_timer += rl.GetFrameTime()
 		return
 	}
 
-    // if reached the blocked -> stopping
+	// TODO: lock if reached the bottom or inactive blocks
+	if game_state.active_y >= ROWS_COUNT - 1 {
+		lock_active_tetromino(game_state)
+        spawn_tetromino(game_state, TetrominoShape.I)
+	} else {
+		game_state.active_y += 1
+	}
 
 	game_state.active_move_timer = 0
-	game_state.active_y += 1
 }
 
 spawn_tetromino :: proc(game_state: ^Game_State, shape: TetrominoShape) {
