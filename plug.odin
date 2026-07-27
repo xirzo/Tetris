@@ -120,70 +120,33 @@ game_update :: proc(state: rawptr, ctx: runtime.Context) {
 	context = ctx
 	game_state := cast(^Game_State)state
 
-    when DEBUG_BUILD do if rl.IsKeyPressed(.R) do reset_game(game_state)
+	when DEBUG_BUILD do if rl.IsKeyPressed(.R) do reset_game(game_state)
 
 	update_input_and_move(game_state)
 	update_active_tetromino(game_state)
 	update_lost_condition(game_state)
 }
 
-// TODO: refactor initialization of left
-get_most_left_active_board_x :: proc(game_state: ^Game_State) -> i32 {
-	left: i32 = 0
-
+is_valid_position :: proc(game_state: ^Game_State, target_x: i32, target_y: i32) -> bool {
 	for y in 0 ..< TETROMINO_SIDE {
 		for x in 0 ..< TETROMINO_SIDE {
 			if game_state.active_grid[y][x] != 1 {
 				continue
 			}
 
-			board_x := game_state.active_x + cast(i32)x
-			left = board_x
-			break
-		}
-	}
-	for y in 0 ..< TETROMINO_SIDE {
-		for x in 0 ..< TETROMINO_SIDE {
-			if game_state.active_grid[y][x] != 1 {
-				continue
-			}
+			board_x := target_x + cast(i32)x
+			board_y := target_y + cast(i32)y
 
-			board_x := game_state.active_x + cast(i32)x
-			left = min(board_x, left)
+			if board_x < 0 || board_x >= COLS_COUNT do return false
+
+			if board_y >= ROWS_COUNT do return false
+
+			if board_y >= 0 && game_state.board[board_x][board_y] != .Empty do return false
+			
 		}
 	}
 
-	return left
-}
-
-// TODO: refactor initialization of right
-get_most_right_active_board_x :: proc(game_state: ^Game_State) -> i32 {
-	right: i32 = 0
-
-	for y in 0 ..< TETROMINO_SIDE {
-		for x in 0 ..< TETROMINO_SIDE {
-			if game_state.active_grid[y][x] != 1 {
-				continue
-			}
-
-			board_x := game_state.active_x + cast(i32)x
-			right = board_x
-			break
-		}
-	}
-
-	for y in 0 ..< TETROMINO_SIDE {
-		for x in 0 ..< TETROMINO_SIDE {
-			if game_state.active_grid[y][x] != 1 {
-				continue
-			}
-
-			board_x := game_state.active_x + cast(i32)x
-			right = max(board_x, right)
-		}
-	}
-
-	return right
+	return true
 }
 
 update_input_and_move :: proc(game_state: ^Game_State) {
@@ -192,12 +155,14 @@ update_input_and_move :: proc(game_state: ^Game_State) {
 	if rl.IsKeyPressed(rl.KeyboardKey.A) || rl.IsKeyPressed(rl.KeyboardKey.LEFT) do input = -1
 	if rl.IsKeyPressed(rl.KeyboardKey.D) || rl.IsKeyPressed(rl.KeyboardKey.RIGHT) do input = 1
 
-	most_left := get_most_left_active_board_x(game_state)
-	most_right := get_most_right_active_board_x(game_state)
-
-	if most_left + input >= 0 && most_right + input < COLS_COUNT {
-		game_state.active_x += input
+	if input == 0 {
 		return
+	}
+
+	target_x := game_state.active_x + input
+
+	if is_valid_position(game_state, target_x, game_state.active_y) {
+		game_state.active_x = target_x
 	}
 }
 
@@ -504,8 +469,8 @@ draw_atlas_texture :: proc(
 }
 
 reset_game :: proc(game_state: ^Game_State) {
-    game_state.debug_font_size = 32
-    game_state.debug_font_spacing = 2
+	game_state.debug_font_size = 32
+	game_state.debug_font_spacing = 2
 
 	game_state.font_size = 32
 	game_state.font_spacing = 2
