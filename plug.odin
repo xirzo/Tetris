@@ -122,9 +122,14 @@ game_update :: proc(state: rawptr, ctx: runtime.Context) {
 
 	when DEBUG_BUILD do if rl.IsKeyPressed(.R) do reset_game(game_state)
 
-	update_input_and_move(game_state)
+	if game_state.has_lost {
+		if rl.IsKeyPressed(.ENTER) do reset_game(game_state)
+		return
+	}
+
+	update_movement_input(game_state)
+	update_rotation_input(game_state)
 	update_active_tetromino(game_state)
-	update_lost_condition(game_state)
 }
 
 is_valid_position :: proc(game_state: ^Game_State, target_x: i32, target_y: i32) -> bool {
@@ -142,14 +147,14 @@ is_valid_position :: proc(game_state: ^Game_State, target_x: i32, target_y: i32)
 			if board_y >= ROWS_COUNT do return false
 
 			if board_y >= 0 && game_state.board[board_x][board_y] != .Empty do return false
-			
+
 		}
 	}
 
 	return true
 }
 
-update_input_and_move :: proc(game_state: ^Game_State) {
+update_movement_input :: proc(game_state: ^Game_State) {
 	input: i32
 
 	if rl.IsKeyPressed(rl.KeyboardKey.A) || rl.IsKeyPressed(rl.KeyboardKey.LEFT) do input = -1
@@ -166,15 +171,43 @@ update_input_and_move :: proc(game_state: ^Game_State) {
 	}
 }
 
+update_rotation_input :: proc(game_state: ^Game_State) {
+	if rl.IsKeyPressed(.UP) || rl.IsKeyPressed(.W) {
+		rotate_active_tetromino_clockwise(game_state)
+	}
+}
 
-// TODO: extend the grid and allow placing above
-update_lost_condition :: proc(game_state: ^Game_State) {
-	for x in 0 ..< TETROMINO_SIDE {
-		if game_state.board[x][0] == Cell.LockedTetromino {
-			game_state.has_lost = true
-			return
+rotate_active_tetromino_clockwise :: proc(game_state: ^Game_State) {
+	transposed := transpose(game_state.active_grid)
+
+	rotated: [TETROMINO_SIDE][TETROMINO_SIDE]u8
+
+	for y in 0 ..< TETROMINO_SIDE {
+		for x in 0 ..< TETROMINO_SIDE {
+			reverse_x := (TETROMINO_SIDE - 1) - x
+			rotated[y][reverse_x] = transposed[y][x]
 		}
 	}
+
+	old_grid := game_state.active_grid
+
+	game_state.active_grid = rotated
+
+	if !is_valid_position(game_state, game_state.active_x, game_state.active_y) {
+		game_state.active_grid = old_grid
+	}
+}
+
+transpose :: proc(grid: [TETROMINO_SIDE][TETROMINO_SIDE]u8) -> [TETROMINO_SIDE][TETROMINO_SIDE]u8 {
+	result: [TETROMINO_SIDE][TETROMINO_SIDE]u8
+
+	for y in 0 ..< TETROMINO_SIDE {
+		for x in 0 ..< TETROMINO_SIDE {
+			result[x][y] = grid[y][x]
+		}
+	}
+
+	return result
 }
 
 @(export)
@@ -384,72 +417,34 @@ lock_active_tetromino :: proc(game_state: ^Game_State) {
 	}
 }
 
-does_active_touch_bottom :: proc(game_state: ^Game_State) -> bool {
-	if game_state.active_y >= ROWS_COUNT - 1 {
-		return true
-	}
-
-	for y in 0 ..< TETROMINO_SIDE {
-		for x in 0 ..< TETROMINO_SIDE {
-			if game_state.active_grid[y][x] != 1 {
-				continue
-			}
-
-			board_x := game_state.active_x + cast(i32)x
-			board_y := game_state.active_y + cast(i32)y
-
-			if game_state.board[board_x][board_y + 1] != Cell.Empty {
-				return true
-			}
-		}
-	}
-
-	return false
-}
-
 update_active_tetromino :: proc(game_state: ^Game_State) {
 	if game_state.active_move_timer < game_state.active_move_delay {
 		game_state.active_move_timer += rl.GetFrameTime()
 		return
 	}
-
-	// TODO: lock if touches the inactive blocks with bottom
-	if does_active_touch_bottom(game_state) {
-		lock_active_tetromino(game_state)
-
-		// BUG: move this out of here, this produces a bug when lost, new
-		// tetromino is spawned on locked one
-		if !game_state.has_lost {
-			spawn_tetromino(game_state, TetrominoShape.I)
-		}
-	} else {
-		game_state.active_y += 1
-	}
-
 	game_state.active_move_timer = 0
+
+	target_y := game_state.active_y + 1
+
+	if is_valid_position(game_state, game_state.active_x, target_y) {
+		game_state.active_y = target_y
+		return
+	}
+	lock_active_tetromino(game_state)
+	spawn_tetromino(game_state, TetrominoShape.I)
 }
 
 spawn_tetromino :: proc(game_state: ^Game_State, shape: TetrominoShape) {
-	// TODO: check if space is already locked? or extend the grid
 	game_state.active_shape = shape
 	game_state.active_grid = TETROMINO_SHAPES[shape]
 
 	game_state.active_x = 3
 	game_state.active_y = 0
 
-	switch shape {
-	case .I:
-	case .J:
-	case .L:
-	case .O:
-	case .S:
-	case .T:
-	case .Z:
-	case:
-		fmt.eprintln("[plug] invalid tetromino shape")
+	if !is_valid_position(game_state, game_state.active_x, game_state.active_y) {
+		game_state.has_lost = true
 	}
 }
-
 
 draw_atlas_texture :: proc(
 	game_state: ^Game_State,
