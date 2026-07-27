@@ -1,5 +1,7 @@
 package plug
 
+// TODO: add restart game button
+
 import "base:runtime"
 import "core:fmt"
 import rl "vendor:raylib"
@@ -80,6 +82,7 @@ Game_State :: struct {
 	active_y:           i32,
 	active_move_delay:  f32,
 	active_move_timer:  f32,
+	has_lost:           bool,
 }
 
 @(export)
@@ -116,8 +119,10 @@ game_init :: proc(state: ^rawptr, ctx: runtime.Context) {
 	game_state.level = 1
 	game_state.lines = 0
 
-	game_state.active_move_delay = 0.1
+	game_state.active_move_delay = 0.001
 	game_state.active_move_timer = 0
+
+	game_state.has_lost = false
 
 	for x in 0 ..< COLS_COUNT {
 		for y in 0 ..< ROWS_COUNT {
@@ -135,6 +140,17 @@ game_update :: proc(state: rawptr, ctx: runtime.Context) {
 	game_state := cast(^Game_State)state
 
 	update_active_tetromino(game_state)
+	update_lost_condition(game_state)
+}
+
+// TODO: extend the grid and allow placing above
+update_lost_condition :: proc(game_state: ^Game_State) {
+	for x in 0 ..< TETROMINO_SIDE {
+		if game_state.board[x][0] == Cell.LockedTetromino {
+			game_state.has_lost = true
+			return
+		}
+	}
 }
 
 @(export)
@@ -340,9 +356,9 @@ does_active_touch_bottom :: proc(game_state: ^Game_State) -> bool {
 			board_x := game_state.active_x + cast(i32)x
 			board_y := game_state.active_y + cast(i32)y
 
-            if game_state.board[board_x][board_y + 1] != Cell.Empty {
-                return true
-            }
+			if game_state.board[board_x][board_y + 1] != Cell.Empty {
+				return true
+			}
 		}
 	}
 
@@ -358,7 +374,12 @@ update_active_tetromino :: proc(game_state: ^Game_State) {
 	// TODO: lock if touches the inactive blocks with bottom
 	if does_active_touch_bottom(game_state) {
 		lock_active_tetromino(game_state)
-		spawn_tetromino(game_state, TetrominoShape.I)
+
+        // BUG: move this out of here, this produces a bug when lost, new
+        // tetromino is spawned on locked one
+		if !game_state.has_lost {
+			spawn_tetromino(game_state, TetrominoShape.I)
+		}
 	} else {
 		game_state.active_y += 1
 	}
@@ -367,6 +388,7 @@ update_active_tetromino :: proc(game_state: ^Game_State) {
 }
 
 spawn_tetromino :: proc(game_state: ^Game_State, shape: TetrominoShape) {
+    // TODO: check if space is already locked? or extend the grid
 	game_state.active_shape = shape
 	game_state.active_grid = TETROMINO_SHAPES[shape]
 
