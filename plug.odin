@@ -22,13 +22,14 @@ BACKGROUND_COLOR :: rl.Color{34, 35, 35, 255}
 DEBUG_BUILD :: true
 
 TEXTURE_OFFSETS := [Cell]rl.Vector2 {
-	.Wall    = rl.Vector2{0, 0},
-	.AltWall = rl.Vector2{IMAGE_SOURCE_SIZE, 0},
-	.Empty   = rl.Vector2{IMAGE_SOURCE_SIZE * 2, 0},
+	.Wall      = rl.Vector2{0, 0},
+	.AltWall   = rl.Vector2{IMAGE_SOURCE_SIZE, 0},
+	.Empty     = rl.Vector2{IMAGE_SOURCE_SIZE * 2, 0},
+	.Tetromino = rl.Vector2{IMAGE_SOURCE_SIZE * 3, 0},
 }
 
 TETROMINO_SHAPES: [TetrominoShape]Shape_Grid = {
-	.I = {{0, 0, 0, 0}, {1, 1, 1, 1}, {0, 0, 0, 0}, {0, 0, 0, 0}},
+	.I = {{1, 1, 1, 1}, {0, 0, 0, 0}, {0, 0, 0, 0}, {0, 0, 0, 0}},
 	.J = {{1, 0, 0, 0}, {1, 1, 1, 0}, {0, 0, 0, 0}, {0, 0, 0, 0}},
 	.L = {{0, 0, 1, 0}, {1, 1, 1, 0}, {0, 0, 0, 0}, {0, 0, 0, 0}},
 	.O = {{0, 1, 1, 0}, {0, 1, 1, 0}, {0, 0, 0, 0}, {0, 0, 0, 0}},
@@ -53,6 +54,7 @@ Cell :: enum {
 	Wall,
 	AltWall,
 	Empty,
+	Tetromino,
 }
 
 Game_State :: struct {
@@ -277,9 +279,30 @@ draw_grid :: proc(game_state: ^Game_State) {
 			rl.Vector2{x_pos, cast(f32)bottom_y},
 		)
 	}
+
+	for y in 0 ..< 4 {
+		for x in 0 ..< 4 {
+			if game_state.active_grid[y][x] == 1 {
+
+				board_x := game_state.active_x + cast(i32)x
+				board_y := game_state.active_y + cast(i32)y
+
+				pos_x := START_X + (cast(f32)board_x * IMAGE_DEST_SIZE)
+				pos_y := START_Y + (cast(f32)board_y * IMAGE_DEST_SIZE)
+
+				draw_atlas_texture(game_state, TEXTURE_OFFSETS[.Tetromino], rl.Vector2{pos_x, pos_y})
+			}
+		}
+	}
 }
 
 spawn_tetromino :: proc(game_state: ^Game_State, shape: TetrominoShape) {
+	game_state.active_shape = shape
+	game_state.active_grid = TETROMINO_SHAPES[shape]
+
+	game_state.active_x = 3
+	game_state.active_y = 0
+
 	switch shape {
 	case .I:
 	case .J:
