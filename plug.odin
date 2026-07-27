@@ -11,8 +11,8 @@ IMAGE_DEST_SIZE :: IMAGE_SOURCE_SIZE * IMAGE_SPRITE_SCALE
 ATLAS_TEXTURE_PATH :: "assets/atlas.png"
 FONT_TEXTURE_PATH :: "assets/vcr_osd_mono.ttf"
 
-COLS_COUNT :: 12
-ROWS_COUNT :: 21
+COLS_COUNT :: 10
+ROWS_COUNT :: 20
 
 GAME_WIDTH :: 1920
 GAME_HEIGHT :: 1080
@@ -21,10 +21,32 @@ BACKGROUND_COLOR :: rl.Color{34, 35, 35, 255}
 
 DEBUG_BUILD :: true
 
-texture_offsets := [Cell]rl.Vector2 {
+TEXTURE_OFFSETS := [Cell]rl.Vector2 {
 	.Wall    = rl.Vector2{0, 0},
 	.AltWall = rl.Vector2{IMAGE_SOURCE_SIZE, 0},
 	.Empty   = rl.Vector2{IMAGE_SOURCE_SIZE * 2, 0},
+}
+
+TETROMINO_SHAPES: [TetrominoShape]Shape_Grid = {
+	.I = {{0, 0, 0, 0}, {1, 1, 1, 1}, {0, 0, 0, 0}, {0, 0, 0, 0}},
+	.J = {{1, 0, 0, 0}, {1, 1, 1, 0}, {0, 0, 0, 0}, {0, 0, 0, 0}},
+	.L = {{0, 0, 1, 0}, {1, 1, 1, 0}, {0, 0, 0, 0}, {0, 0, 0, 0}},
+	.O = {{0, 1, 1, 0}, {0, 1, 1, 0}, {0, 0, 0, 0}, {0, 0, 0, 0}},
+	.S = {{0, 1, 1, 0}, {1, 1, 0, 0}, {0, 0, 0, 0}, {0, 0, 0, 0}},
+	.T = {{0, 1, 0, 0}, {1, 1, 1, 0}, {0, 0, 0, 0}, {0, 0, 0, 0}},
+	.Z = {{1, 1, 0, 0}, {0, 1, 1, 0}, {0, 0, 0, 0}, {0, 0, 0, 0}},
+}
+
+Shape_Grid :: [4][4]u8
+
+TetrominoShape :: enum {
+	I,
+	J,
+	L,
+	O,
+	S,
+	T,
+	Z,
 }
 
 Cell :: enum {
@@ -46,6 +68,10 @@ Game_State :: struct {
 	score:              i32,
 	level:              i32,
 	lines:              i32,
+	active_shape:       TetrominoShape,
+	active_grid:        Shape_Grid,
+	active_x:           i32,
+	active_y:           i32,
 }
 
 @(export)
@@ -66,6 +92,8 @@ game_init :: proc(state: ^rawptr, ctx: runtime.Context) {
 		return
 	}
 
+	spawn_tetromino(game_state, TetrominoShape.I)
+
 	game_state.atlas = atlas
 	game_state.target_texture = rl.LoadRenderTexture(GAME_WIDTH, GAME_HEIGHT)
 	game_state.debug_font_size = 32
@@ -80,8 +108,8 @@ game_init :: proc(state: ^rawptr, ctx: runtime.Context) {
 	game_state.level = 1
 	game_state.lines = 0
 
-	for x in 1 ..< COLS_COUNT - 1 {
-		for y in 0 ..< ROWS_COUNT - 1 {
+	for x in 0 ..< COLS_COUNT {
+		for y in 0 ..< ROWS_COUNT {
 			game_state.cells[x][y] = Cell.Empty
 		}
 	}
@@ -213,20 +241,56 @@ draw_grid :: proc(game_state: ^Game_State) {
 
 	for x in 0 ..< COLS_COUNT {
 		for y in 0 ..< ROWS_COUNT {
-			pos_x := START_X + (x * IMAGE_DEST_SIZE)
-			pos_y := START_Y + (y * IMAGE_DEST_SIZE)
+			pos_x := START_X + (cast(f32)x * IMAGE_DEST_SIZE)
+			pos_y := START_Y + (cast(f32)y * IMAGE_DEST_SIZE)
 
 			draw_atlas_texture(
 				game_state,
-				texture_offsets[game_state.cells[x][y]],
-				rl.Vector2{cast(f32)pos_x, cast(f32)pos_y},
+				TEXTURE_OFFSETS[game_state.cells[x][y]],
+				rl.Vector2{pos_x, pos_y},
 			)
 		}
 	}
+
+	for y in 0 ..< ROWS_COUNT {
+		y_pos := START_Y + (cast(f32)y * IMAGE_DEST_SIZE)
+
+		draw_atlas_texture(
+			game_state,
+			TEXTURE_OFFSETS[.Wall],
+			rl.Vector2{START_X - IMAGE_DEST_SIZE, y_pos},
+		)
+
+		draw_atlas_texture(
+			game_state,
+			TEXTURE_OFFSETS[.Wall],
+			rl.Vector2{START_X + GRID_PIXEL_WIDTH, y_pos},
+		)
+	}
+
+	bottom_y := START_Y + GRID_PIXEL_HEIGHT
+	for x in -1 ..= COLS_COUNT {
+		x_pos := START_X + (cast(f32)x * IMAGE_DEST_SIZE)
+		draw_atlas_texture(
+			game_state,
+			TEXTURE_OFFSETS[.Wall],
+			rl.Vector2{x_pos, cast(f32)bottom_y},
+		)
+	}
 }
 
-place_tetromino :: proc(game_state: ^Game_State) {
-
+spawn_tetromino :: proc(game_state: ^Game_State, shape: TetrominoShape) {
+	switch shape {
+	case .I:
+	case .J:
+	case .L:
+	case .O:
+	case .S:
+	case .T:
+	case .Z:
+	case:
+		fmt.eprintln("[plug] invalid tetromino shape")
+	}
 }
 
 
