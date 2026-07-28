@@ -4,8 +4,6 @@ import "core:math/rand"
 
 // TODO: add sounds
 // TODO: add a delay to blocking the tetromino
-// TODO: add release font/image embedding
-// TODO: add testing setups (like full map)
 // TODO: do not spawn tetromino after losing (locking the top shelf)
 
 import "base:runtime"
@@ -18,8 +16,8 @@ IMAGE_SOURCE_SIZE :: 8
 IMAGE_SPRITE_SCALE :: 4
 IMAGE_DEST_SIZE :: IMAGE_SOURCE_SIZE * IMAGE_SPRITE_SCALE
 
-ATLAS_TEXTURE_PATH :: "assets/atlas.png"
-FONT_TEXTURE_PATH :: "assets/vcr_osd_mono.ttf"
+ATLAS_BYTES :: #load("assets/atlas.png")
+FONT_BYTES :: #load("assets/vcr_osd_mono.ttf")
 
 COLS_COUNT :: 10
 ROWS_COUNT :: 20
@@ -103,18 +101,41 @@ game_init :: proc(state: ^rawptr, ctx: runtime.Context) {
 
 	game_state := new(Game_State)
 
-	atlas := rl.LoadTexture(ATLAS_TEXTURE_PATH)
+	reset_game(game_state)
+
+	atlas_img := rl.LoadImageFromMemory(".png", raw_data(ATLAS_BYTES), cast(i32)len(ATLAS_BYTES))
+	if atlas_img.data == nil {
+		fmt.eprintln("[plug] failed to load atlas texture from memory")
+		return
+	}
+
+	atlas := rl.LoadTextureFromImage(atlas_img)
+	rl.UnloadImage(atlas_img)
 	if atlas.id <= 0 {
 		fmt.eprintln("[plug] failed to load atlas texture")
 		return
 	}
 
+	game_state.font = rl.LoadFontFromMemory(
+		".ttf",
+		raw_data(FONT_BYTES),
+		cast(i32)len(FONT_BYTES),
+		cast(i32)game_state.font_size,
+		nil,
+		0,
+	)
+
+	game_state.debug_font = rl.LoadFontFromMemory(
+		".ttf",
+		raw_data(FONT_BYTES),
+		cast(i32)len(FONT_BYTES),
+		cast(i32)game_state.debug_font_size,
+		nil,
+		0,
+	)
+
 	game_state.atlas = atlas
 	game_state.target_texture = rl.LoadRenderTexture(GAME_WIDTH, GAME_HEIGHT)
-	game_state.debug_font = rl.LoadFont(FONT_TEXTURE_PATH)
-	game_state.font = rl.LoadFont(FONT_TEXTURE_PATH)
-
-	reset_game(game_state)
 
 	state^ = game_state
 	fmt.println("[plug] allocated game_state")
@@ -569,7 +590,7 @@ reset_game :: proc(game_state: ^Game_State) {
 	game_state.level = 1
 	game_state.lines = 0
 
-    // TODO: gradually increase speed
+	// TODO: gradually increase speed
 	// game_state.active_move_delay = 0.001
 	game_state.active_move_delay = 0.1
 	game_state.active_move_timer = 0
