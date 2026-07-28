@@ -3,7 +3,6 @@ package plug
 import "core:math/rand"
 
 // TODO: add sounds
-// TODO: add a delay to blocking the tetromino
 // TODO: do not spawn tetromino after losing (locking the top shelf)
 
 import "base:runtime"
@@ -11,6 +10,7 @@ import "core:fmt"
 import rl "vendor:raylib"
 
 TETROMINO_SIDE :: 4
+TETROMINO_LOCK_DELAY :: 0.025
 
 IMAGE_SOURCE_SIZE :: 8
 IMAGE_SPRITE_SCALE :: 4
@@ -87,6 +87,7 @@ Game_State :: struct {
 	active_move_delay:  f32,
 	active_move_timer:  f32,
 	has_lost:           bool,
+	locking_timer:      f32,
 }
 
 @(export)
@@ -467,9 +468,16 @@ update_active_tetromino :: proc(game_state: ^Game_State) {
 		game_state.active_y = target_y
 		return
 	}
-	lock_active_tetromino(game_state)
 
+	if game_state.locking_timer < TETROMINO_LOCK_DELAY {
+		game_state.locking_timer += rl.GetFrameTime()
+		return
+	}
+
+	game_state.locking_timer = 0
+	lock_active_tetromino(game_state)
 	spawn_tetromino(game_state, rand.choice_enum(Tetromino_Shape))
+
 }
 
 spawn_tetromino :: proc(game_state: ^Game_State, shape: Tetromino_Shape) {
@@ -518,6 +526,8 @@ set_midgame_state :: proc(game_state: ^Game_State) {
 	game_state.active_move_timer = 0
 
 	game_state.has_lost = false
+
+	game_state.locking_timer = 0
 
 	for x in 0 ..< COLS_COUNT {
 		for y in 0 ..< ROWS_COUNT {
@@ -602,6 +612,8 @@ reset_game :: proc(game_state: ^Game_State) {
 			game_state.board[x][y] = Cell.Empty
 		}
 	}
+
+	game_state.locking_timer = 0
 
 	spawn_tetromino(game_state, rand.choice_enum(Tetromino_Shape))
 }
