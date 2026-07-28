@@ -1,5 +1,10 @@
 package plug
 
+import "core:math/rand"
+
+// TODO: add sounds
+// TODO: add a delay to blocking the tetromino
+// TODO: add release font/image embedding
 // TODO: add testing setups (like full map)
 // TODO: do not spawn tetromino after losing (locking the top shelf)
 
@@ -24,7 +29,7 @@ GAME_HEIGHT :: 1080
 
 BACKGROUND_COLOR :: rl.Color{34, 35, 35, 255}
 
-DEBUG_BUILD :: true
+DEBUG_BUILD :: false
 
 TEXTURE_OFFSETS := [Cell]rl.Vector2 {
 	.Wall            = rl.Vector2{0, 0},
@@ -34,7 +39,7 @@ TEXTURE_OFFSETS := [Cell]rl.Vector2 {
 	.LockedTetromino = rl.Vector2{IMAGE_SOURCE_SIZE * 4, 0},
 }
 
-TETROMINO_SHAPES: [TetrominoShape]Shape_Grid = {
+TETROMINO_SHAPES: [Tetromino_Shape]Shape_Grid = {
 	.I = {{1, 1, 1, 1}, {0, 0, 0, 0}, {0, 0, 0, 0}, {0, 0, 0, 0}},
 	.J = {{1, 0, 0, 0}, {1, 1, 1, 0}, {0, 0, 0, 0}, {0, 0, 0, 0}},
 	.L = {{0, 0, 1, 0}, {1, 1, 1, 0}, {0, 0, 0, 0}, {0, 0, 0, 0}},
@@ -46,7 +51,7 @@ TETROMINO_SHAPES: [TetrominoShape]Shape_Grid = {
 
 Shape_Grid :: [TETROMINO_SIDE][TETROMINO_SIDE]u8
 
-TetrominoShape :: enum {
+Tetromino_Shape :: enum {
 	I,
 	J,
 	L,
@@ -77,7 +82,7 @@ Game_State :: struct {
 	score:              i32,
 	level:              i32,
 	lines:              i32,
-	active_shape:       TetrominoShape,
+	active_shape:       Tetromino_Shape,
 	active_grid:        Shape_Grid,
 	active_x:           i32,
 	active_y:           i32,
@@ -442,10 +447,11 @@ update_active_tetromino :: proc(game_state: ^Game_State) {
 		return
 	}
 	lock_active_tetromino(game_state)
-	spawn_tetromino(game_state, TetrominoShape.I)
+
+	spawn_tetromino(game_state, rand.choice_enum(Tetromino_Shape))
 }
 
-spawn_tetromino :: proc(game_state: ^Game_State, shape: TetrominoShape) {
+spawn_tetromino :: proc(game_state: ^Game_State, shape: Tetromino_Shape) {
 	game_state.active_shape = shape
 	game_state.active_grid = TETROMINO_SHAPES[shape]
 
@@ -475,30 +481,6 @@ draw_atlas_texture :: proc(
 	)
 }
 
-reset_game :: proc(game_state: ^Game_State) {
-	game_state.debug_font_size = 32
-	game_state.debug_font_spacing = 2
-
-	game_state.font_size = 32
-	game_state.font_spacing = 2
-
-	game_state.score = 0
-	game_state.level = 1
-	game_state.lines = 0
-
-	game_state.active_move_delay = 0.001
-	game_state.active_move_timer = 0
-
-	game_state.has_lost = false
-
-	for x in 0 ..< COLS_COUNT {
-		for y in 0 ..< ROWS_COUNT {
-			game_state.board[x][y] = Cell.Empty
-		}
-	}
-
-	spawn_tetromino(game_state, .I)
-}
 
 set_midgame_state :: proc(game_state: ^Game_State) {
 	game_state.debug_font_size = 32
@@ -538,7 +520,7 @@ clear_line :: proc(game_state: ^Game_State, y: i32) {
 clear_lines :: proc(game_state: ^Game_State) {
 	cleared_lines := 0
 
-	for y := ROWS_COUNT - 1; y >= 0;  {
+	for y := ROWS_COUNT - 1; y >= 0; {
 		is_full := true
 
 		for x in 0 ..< COLS_COUNT {
@@ -556,9 +538,9 @@ clear_lines :: proc(game_state: ^Game_State) {
 			}
 			clear_line(game_state, 0)
 			cleared_lines += 1
-        } else {
-            y -= 1
-        }
+		} else {
+			y -= 1
+		}
 	}
 
 	if cleared_lines > 0 {
@@ -574,4 +556,31 @@ clear_lines :: proc(game_state: ^Game_State) {
 			game_state.score += 800
 		}
 	}
+}
+
+reset_game :: proc(game_state: ^Game_State) {
+	game_state.debug_font_size = 32
+	game_state.debug_font_spacing = 2
+
+	game_state.font_size = 32
+	game_state.font_spacing = 2
+
+	game_state.score = 0
+	game_state.level = 1
+	game_state.lines = 0
+
+    // TODO: gradually increase speed
+	// game_state.active_move_delay = 0.001
+	game_state.active_move_delay = 0.1
+	game_state.active_move_timer = 0
+
+	game_state.has_lost = false
+
+	for x in 0 ..< COLS_COUNT {
+		for y in 0 ..< ROWS_COUNT {
+			game_state.board[x][y] = Cell.Empty
+		}
+	}
+
+	spawn_tetromino(game_state, rand.choice_enum(Tetromino_Shape))
 }
