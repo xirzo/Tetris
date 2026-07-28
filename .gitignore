@@ -1,3 +1,8 @@
+
+# Binaries
+x86_64_linux_tetris
+x86_64_windows_tetris
+
 # Vim
 *.swp
 
