@@ -1,3 +1,8 @@
+# Tetris
+
+<div align="center">
+  <img width="800" height="450" alt="gif" src="https://github.com/user-attachments/assets/654c38ff-6cdc-4d79-b068-4df817010111" />
+</div>
 
 ## Running
 
