@@ -16,8 +16,8 @@ IMAGE_SOURCE_SIZE :: 8
 IMAGE_SPRITE_SCALE :: 4
 IMAGE_DEST_SIZE :: IMAGE_SOURCE_SIZE * IMAGE_SPRITE_SCALE
 
-ATLAS_BYTES :: #load("assets/atlas.png")
-FONT_BYTES :: #load("assets/vcr_osd_mono.ttf")
+ATLAS_BYTES :: #load("../../assets/atlas.png")
+FONT_BYTES :: #load("../../assets/vcr_osd_mono.ttf")
 
 COLS_COUNT :: 10
 ROWS_COUNT :: 20
@@ -27,7 +27,7 @@ GAME_HEIGHT :: 1080
 
 BACKGROUND_COLOR :: rl.Color{34, 35, 35, 255}
 
-DEBUG_BUILD :: false
+DEBUG_BUILD :: #config(DEBUG_BUILD, false)
 
 TEXTURE_OFFSETS := [Cell]rl.Vector2 {
 	.Wall            = rl.Vector2{0, 0},

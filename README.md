@@ -6,8 +6,24 @@
 
 ## Running
 
+### Development
+
 ```sh
-odin run src -define:RAYLIB_SHARED=true
+odin run src/main_hotreload.odin -file -define:RAYLIB_SHARED=true
+```
+
+### Release
+
+```sh
+odin run src/main_release.odin -file
+```
+
+## Building
+
+### Release
+
+```sh
+odin build src/main_release.odin -file -out:x86_64_linux_tetris -o:speed
 ```
 
 ## Issues
