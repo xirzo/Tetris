@@ -157,6 +157,7 @@ game_update :: proc(state: rawptr, ctx: runtime.Context) {
 
 	clear_lines(game_state)
 	update_movement_input(game_state)
+	update_drop_input(game_state)
 	update_rotation_input(game_state)
 	update_active_tetromino(game_state)
 }
@@ -173,7 +174,7 @@ is_valid_position :: proc(game_state: ^Game_State, target_x: i32, target_y: i32)
 
 			if board_x < 0 || board_x >= COLS_COUNT do return false
 
-			if board_y >= ROWS_COUNT do return false
+			if board_y < 0 || board_y >= ROWS_COUNT do return false
 
 			if board_y >= 0 && game_state.board[board_x][board_y] != .Empty do return false
 
@@ -181,6 +182,32 @@ is_valid_position :: proc(game_state: ^Game_State, target_x: i32, target_y: i32)
 	}
 
 	return true
+}
+
+drop_active_tetromino :: proc(game_state: ^Game_State) {
+	target_y := game_state.active_y
+
+	if target_y == ROWS_COUNT {
+		return
+	}
+
+	for {
+		if !is_valid_position(game_state, game_state.active_x, target_y + 1) {
+			break
+		}
+
+		target_y += 1
+	}
+
+	game_state.active_y = target_y
+
+    lock_active_tetromino(game_state)
+    clear_lines(game_state)
+    game_state.locking_timer = 0
+}
+
+update_drop_input :: proc(game_state: ^Game_State) {
+	if rl.IsKeyPressed(.SPACE) do drop_active_tetromino(game_state)
 }
 
 update_movement_input :: proc(game_state: ^Game_State) {

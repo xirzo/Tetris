@@ -137,7 +137,7 @@ main :: proc() {
 		// if check_err == os.ERROR_NONE && time.diff(last_write_time,
 		// current_write_time) > 0|| rl.IsKeyPressed(rl.KeyboardKey.SPACE) {
 
-		if rl.IsKeyPressed(rl.KeyboardKey.SPACE) {
+		if rl.IsKeyPressed(rl.KeyboardKey.G) {
 			fmt.println("[main] changes detected! recompiling...")
 
 			plug.deinit(&state, context)
