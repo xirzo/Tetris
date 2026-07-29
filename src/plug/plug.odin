@@ -72,6 +72,8 @@ TETROMINO_SHAPES: [Tetromino_Shape]Shape_Grid = {
 	.Z = {{1, 1, 0, 0}, {0, 1, 1, 0}, {0, 0, 0, 0}, {0, 0, 0, 0}},
 }
 
+SOUNDS_COUNT :: 3
+
 Shape_Grid :: [TETROMINO_SIDE][TETROMINO_SIDE]u8
 
 Tetromino_Shape :: enum {
@@ -114,26 +116,8 @@ Game_State :: struct {
 	has_lost:           bool,
 	locking_timer:      f32,
 	accumulator:        f32,
-	sounds:             [len(sound_waves)]rl.Sound,
+	sounds:             [SOUNDS_COUNT]rl.Sound,
 	music:              rl.Music,
-}
-
-sound_waves := [?]rl.Wave {
-	rl.LoadWaveFromMemory(
-		".wav",
-		raw_data(TETROMINO_FALL_SOUND_1_BYTES),
-		cast(i32)len(TETROMINO_FALL_SOUND_1_BYTES),
-	),
-	rl.LoadWaveFromMemory(
-		".wav",
-		raw_data(TETROMINO_FALL_SOUND_2_BYTES),
-		cast(i32)len(TETROMINO_FALL_SOUND_2_BYTES),
-	),
-	rl.LoadWaveFromMemory(
-		".wav",
-		raw_data(TETROMINO_FALL_SOUND_3_BYTES),
-		cast(i32)len(TETROMINO_FALL_SOUND_3_BYTES),
-	),
 }
 
 @(export)
@@ -144,8 +128,8 @@ game_init :: proc(state: ^rawptr, ctx: runtime.Context) {
 	if state^ != nil {
 		log.info("[plug] memory already allocated, skipping...")
 
-        game_state := cast(^Game_State)state
-        rl.ResumeMusicStream(game_state.music)
+		game_state := cast(^Game_State)state
+		rl.ResumeMusicStream(game_state.music)
 		return
 	}
 
@@ -188,6 +172,24 @@ game_init :: proc(state: ^rawptr, ctx: runtime.Context) {
 
 	game_state.atlas = atlas
 	game_state.target_texture = rl.LoadRenderTexture(GAME_WIDTH, GAME_HEIGHT)
+
+	sound_waves := [SOUNDS_COUNT]rl.Wave {
+		rl.LoadWaveFromMemory(
+			".wav",
+			raw_data(TETROMINO_FALL_SOUND_1_BYTES),
+			cast(i32)len(TETROMINO_FALL_SOUND_1_BYTES),
+		),
+		rl.LoadWaveFromMemory(
+			".wav",
+			raw_data(TETROMINO_FALL_SOUND_2_BYTES),
+			cast(i32)len(TETROMINO_FALL_SOUND_2_BYTES),
+		),
+		rl.LoadWaveFromMemory(
+			".wav",
+			raw_data(TETROMINO_FALL_SOUND_3_BYTES),
+			cast(i32)len(TETROMINO_FALL_SOUND_3_BYTES),
+		),
+	}
 
 	for wave, i in sound_waves {
 		game_state.sounds[i] = rl.LoadSoundFromWave(wave)
@@ -446,7 +448,7 @@ game_deinit :: proc(state: ^rawptr, ctx: runtime.Context) {
 	context = ctx
 	game_state := cast(^Game_State)(state^)
 
-    rl.PauseMusicStream(game_state.music)
+	rl.PauseMusicStream(game_state.music)
 	log.info("[plug] deinit")
 }
 
