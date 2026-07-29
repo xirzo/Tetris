@@ -20,7 +20,7 @@ main :: proc() {
 	if !plug_load(&plug, PLUG_SOURCE_PATH) do os.exit(1)
 	defer plug_unload(&plug)
 
-	rl.SetTraceLogLevel(rl.TraceLogLevel.WARNING)
+	rl.SetTraceLogLevel(rl.TraceLogLevel.INFO)
 	rl.SetConfigFlags({.WINDOW_RESIZABLE, .VSYNC_HINT})
 	rl.InitWindow(1920 / 2, 1080 / 2, "Tetris")
 	defer rl.CloseWindow()

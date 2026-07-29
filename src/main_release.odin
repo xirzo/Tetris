@@ -8,7 +8,7 @@ main :: proc() {
     context.logger = log.create_console_logger()
     defer log.destroy_console_logger(context.logger)
 
-	rl.SetTraceLogLevel(rl.TraceLogLevel.WARNING)
+	rl.SetTraceLogLevel(rl.TraceLogLevel.INFO)
 	rl.SetConfigFlags({.WINDOW_RESIZABLE, .VSYNC_HINT})
 
 	rl.InitWindow(1920 / 2, 1080 / 2, "Tetris")

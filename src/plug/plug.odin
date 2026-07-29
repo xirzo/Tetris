@@ -3,6 +3,8 @@ package plug
 import "core:log"
 import "core:math/rand"
 
+// TODO: test each tetromino rotation
+
 // FIX: when dropping with space, dropped tetromino does not get removed with
 // lines
 // TODO: gradually increase speed
@@ -19,7 +21,9 @@ UPDATES_PER_SECOND :: 60.0
 FIXED_DT :: 1.0 / UPDATES_PER_SECOND
 MAX_FRAME_TIME :: 0.25
 
-GAME_VERSION :: "v0.2"
+MASTER_VOLUME :: 0.1
+
+GAME_VERSION :: "v0.3"
 
 TETROMINO_SIDE :: 4
 TETROMINO_LOCK_DELAY :: 0.5
@@ -34,6 +38,7 @@ FONT_BYTES :: #load("../../assets/vcr_osd_mono.ttf")
 TETROMINO_FALL_SOUND_1_BYTES :: #load("../../assets/tetromino_fell_1.wav")
 TETROMINO_FALL_SOUND_2_BYTES :: #load("../../assets/tetromino_fell_2.wav")
 TETROMINO_FALL_SOUND_3_BYTES :: #load("../../assets/tetromino_fell_3.wav")
+MAIN_THEME_BYTES :: #load("../../assets/main_theme.mp3")
 
 COLS_COUNT :: 10
 ROWS_COUNT :: 20
@@ -110,8 +115,8 @@ Game_State :: struct {
 	locking_timer:      f32,
 	accumulator:        f32,
 	sounds:             [len(sound_waves)]rl.Sound,
+	music:              rl.Music,
 }
-
 
 sound_waves := [?]rl.Wave {
 	rl.LoadWaveFromMemory(
@@ -138,10 +143,15 @@ game_init :: proc(state: ^rawptr, ctx: runtime.Context) {
 
 	if state^ != nil {
 		log.info("[plug] memory already allocated, skipping...")
+
+        game_state := cast(^Game_State)state
+        rl.ResumeMusicStream(game_state.music)
 		return
 	}
 
 	game_state := new(Game_State)
+
+	rl.SetMasterVolume(MASTER_VOLUME)
 
 	reset_game(game_state)
 
@@ -184,8 +194,17 @@ game_init :: proc(state: ^rawptr, ctx: runtime.Context) {
 		rl.UnloadWave(wave)
 	}
 
+	game_state.music = rl.LoadMusicStreamFromMemory(
+		".mp3",
+		raw_data(MAIN_THEME_BYTES),
+		cast(i32)len(MAIN_THEME_BYTES),
+	)
+
 	state^ = game_state
 	log.info("[plug] allocated game_state")
+
+	rl.SetMusicVolume(game_state.music, 0.5)
+	rl.PlayMusicStream(game_state.music)
 }
 
 play_random_fall_sound :: proc(game_state: ^Game_State) {
@@ -219,6 +238,8 @@ game_update :: proc(state: rawptr, ctx: runtime.Context) {
 	update_movement_input(game_state)
 	update_drop_input(game_state)
 	update_rotation_input(game_state)
+
+	rl.UpdateMusicStream(game_state.music)
 
 	for game_state.accumulator >= FIXED_DT {
 		update_active_tetromino(game_state)
@@ -425,31 +446,9 @@ game_deinit :: proc(state: ^rawptr, ctx: runtime.Context) {
 	context = ctx
 	game_state := cast(^Game_State)(state^)
 
+    rl.PauseMusicStream(game_state.music)
 	log.info("[plug] deinit")
 }
-
-@(export)
-game_shutdown :: proc(state: ^rawptr, ctx: runtime.Context) {
-	context = ctx
-	if state^ == nil {
-		log.info("[plug] state is already null, while shutting down, skipping...")
-		return
-	}
-
-	game_state := cast(^Game_State)(state^)
-
-	rl.UnloadTexture(game_state.atlas)
-	rl.UnloadRenderTexture(game_state.target_texture)
-	rl.UnloadFont(game_state.debug_font)
-	rl.UnloadFont(game_state.font)
-
-	for fall_sound in game_state.sounds {
-		rl.UnloadSound(fall_sound)
-	}
-
-	log.info("[plug] full shutdown complete")
-}
-
 
 draw_game_info :: proc(game_state: ^Game_State, position: rl.Vector2) {
 	rl.DrawTextEx(
@@ -562,32 +561,32 @@ lock_active_tetromino :: proc(game_state: ^Game_State) {
 }
 
 update_active_tetromino :: proc(game_state: ^Game_State) {
-    target_y := game_state.active_y + 1
-    is_touching_floor := !is_valid_position(game_state, game_state.active_x, target_y)
+	target_y := game_state.active_y + 1
+	is_touching_floor := !is_valid_position(game_state, game_state.active_x, target_y)
 
-    if is_touching_floor {
-        game_state.locking_timer += FIXED_DT
-        
-        if game_state.locking_timer >= TETROMINO_LOCK_DELAY {
-            game_state.locking_timer = 0
-            lock_active_tetromino(game_state)
-            play_random_fall_sound(game_state)
-            spawn_tetromino(game_state, rand.choice_enum(Tetromino_Shape))
-            return
-        }
-    } else {
-        game_state.locking_timer = 0 
-    }
+	if is_touching_floor {
+		game_state.locking_timer += FIXED_DT
 
-    game_state.active_move_timer += FIXED_DT
-    
-    if game_state.active_move_timer >= game_state.active_move_delay {
-        game_state.active_move_timer -= game_state.active_move_delay
+		if game_state.locking_timer >= TETROMINO_LOCK_DELAY {
+			game_state.locking_timer = 0
+			lock_active_tetromino(game_state)
+			play_random_fall_sound(game_state)
+			spawn_tetromino(game_state, rand.choice_enum(Tetromino_Shape))
+			return
+		}
+	} else {
+		game_state.locking_timer = 0
+	}
 
-        if !is_touching_floor {
-            game_state.active_y = target_y
-        }
-    }
+	game_state.active_move_timer += FIXED_DT
+
+	if game_state.active_move_timer >= game_state.active_move_delay {
+		game_state.active_move_timer -= game_state.active_move_delay
+
+		if !is_touching_floor {
+			game_state.active_y = target_y
+		}
+	}
 }
 
 spawn_tetromino :: proc(game_state: ^Game_State, shape: Tetromino_Shape) {
@@ -724,4 +723,28 @@ reset_game :: proc(game_state: ^Game_State) {
 	game_state.locking_timer = 0
 
 	spawn_tetromino(game_state, rand.choice_enum(Tetromino_Shape))
+}
+
+@(export)
+game_shutdown :: proc(state: ^rawptr, ctx: runtime.Context) {
+	context = ctx
+	if state^ == nil {
+		log.info("[plug] state is already null, while shutting down, skipping...")
+		return
+	}
+
+	game_state := cast(^Game_State)(state^)
+
+	rl.UnloadTexture(game_state.atlas)
+	rl.UnloadRenderTexture(game_state.target_texture)
+	rl.UnloadFont(game_state.debug_font)
+	rl.UnloadFont(game_state.font)
+
+	for fall_sound in game_state.sounds {
+		rl.UnloadSound(fall_sound)
+	}
+
+	rl.UnloadMusicStream(game_state.music)
+
+	log.info("[plug] full shutdown complete")
 }
