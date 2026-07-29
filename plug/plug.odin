@@ -33,12 +33,12 @@ IMAGE_SOURCE_SIZE :: 8
 IMAGE_SPRITE_SCALE :: 4
 IMAGE_DEST_SIZE :: IMAGE_SOURCE_SIZE * IMAGE_SPRITE_SCALE
 
-ATLAS_BYTES :: #load("../../assets/atlas.png")
-FONT_BYTES :: #load("../../assets/vcr_osd_mono.ttf")
-TETROMINO_FALL_SOUND_1_BYTES :: #load("../../assets/tetromino_fell_1.wav")
-TETROMINO_FALL_SOUND_2_BYTES :: #load("../../assets/tetromino_fell_2.wav")
-TETROMINO_FALL_SOUND_3_BYTES :: #load("../../assets/tetromino_fell_3.wav")
-MAIN_THEME_BYTES :: #load("../../assets/main_theme.mp3")
+ATLAS_BYTES :: #load("../assets/atlas.png")
+FONT_BYTES :: #load("../assets/vcr_osd_mono.ttf")
+TETROMINO_FALL_SOUND_1_BYTES :: #load("../assets/tetromino_fell_1.wav")
+TETROMINO_FALL_SOUND_2_BYTES :: #load("../assets/tetromino_fell_2.wav")
+TETROMINO_FALL_SOUND_3_BYTES :: #load("../assets/tetromino_fell_3.wav")
+MAIN_THEME_BYTES :: #load("../assets/main_theme.mp3")
 
 COLS_COUNT :: 10
 ROWS_COUNT :: 20
@@ -405,6 +405,15 @@ game_draw :: proc(state: rawptr, ctx: runtime.Context) {
 		game_state.debug_font,
 		"PRESS F1 TO SET MIDGAME",
 		rl.Vector2{10, 10 + 4 * game_state.debug_font_size},
+		game_state.debug_font_size,
+		game_state.debug_font_spacing,
+		rl.WHITE,
+	)
+
+	when DEBUG_BUILD do rl.DrawTextEx(
+		game_state.debug_font,
+		rl.TextFormat("CURRENT GRAVITY: %f", game_state.active_move_delay),
+		rl.Vector2{10, 10 + 5 * game_state.debug_font_size},
 		game_state.debug_font_size,
 		game_state.debug_font_spacing,
 		rl.WHITE,

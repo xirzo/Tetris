@@ -30,7 +30,7 @@ jobs:
 
       - name: Build Game (Windows)
         if: runner.os == 'Windows'
-        run: odin build src/main_release.odin -file -out:x86_64-windows-tetris.exe -target:windows_amd64
+        run: odin build cmd/release -out:x86_64-windows-tetris.exe -target:windows_amd64 -collection:game=.
         
       - name: Upload Windows Artifact
         if: runner.os == 'Windows'
@@ -41,7 +41,7 @@ jobs:
 
       - name: Build Game (Linux)
         if: runner.os == 'Linux'
-        run: odin build src/main_release.odin -file -out:x86_64-linux-tetris -target:linux_amd64
+        run: odin build cmd/release -out:x86_64-linux-tetris -target:linux_amd64 -collection:game=.
         
       - name: Upload Linux Artifact
         if: runner.os == 'Linux'
@@ -52,11 +52,11 @@ jobs:
 
       - name: Build Game (macOS Apple Silicon)
         if: runner.os == 'macOS'
-        run: odin build src/main_release.odin -file -out:arm64-macos-tetris -target:darwin_arm64
+        run: odin build cmd/release -out:arm64-macos-tetris -target:darwin_arm64 -collection:game=.
         
       - name: Build Game (macOS Intel)
         if: runner.os == 'macOS'
-        run: odin build src/main_release.odin -file -out:x86_64-macos-tetris -target:darwin_amd64
+        run: odin build cmd/release -out:x86_64-macos-tetris -target:darwin_amd64 -collection:game=.
 
       - name: Upload macOS Artifacts
         if: runner.os == 'macOS'

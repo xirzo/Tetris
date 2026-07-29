@@ -9,13 +9,14 @@
 ### Development
 
 ```sh
-odin run src/main_hotreload.odin -file -define:RAYLIB_SHARED=true
+odin run cmd/hotreload -define:RAYLIB_SHARED=true -sanitize:address
+
 ```
 
 ### Release
 
 ```sh
-odin run src/main_release.odin -file
+odin run cmd/release -collection:game=.
 ```
 
 ## Building
@@ -23,7 +24,7 @@ odin run src/main_release.odin -file
 ### Release
 
 ```sh
-odin build src/main_release.odin -file -out:x86_64_linux_tetris -o:speed
+odin build cmd/release -out:x86_64_linux_tetris -o:speed -collection:game=.
 ```
 
 ## Issues

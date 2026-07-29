@@ -10,7 +10,7 @@ import rl "vendor:raylib"
 
 OUTPUT_FILE_PATH :: "plug.so"
 FUNCTIONS_PREFIX :: "game_"
-PLUG_SOURCE_PATH :: "src/plug/plug.odin"
+PLUG_SOURCE_PATH :: "plug/plug.odin"
 
 main :: proc() {
     context.logger = log.create_console_logger()
