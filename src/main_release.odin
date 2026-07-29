@@ -11,6 +11,8 @@ main :: proc() {
 	defer rl.CloseWindow()
 
 	rl.SetTargetFPS(60)
+    rl.InitAudioDevice()
+    defer rl.CloseAudioDevice()
 
 	state: rawptr = nil
 

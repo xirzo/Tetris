@@ -1,7 +1,6 @@
 package plug
 
 import "core:math/rand"
-import "core:time"
 
 // TODO: conuter clockwise rotation
 // TODO: falling with S key
@@ -13,7 +12,7 @@ import "base:runtime"
 import "core:fmt"
 import rl "vendor:raylib"
 
-GAME_VERSION :: "v0.1"
+GAME_VERSION :: "v0.2"
 
 TETROMINO_SIDE :: 4
 TETROMINO_LOCK_DELAY :: 0.025
@@ -184,7 +183,6 @@ play_random_fall_sound :: proc(game_state: ^Game_State) {
 	sound := game_state.fall_sounds[2]
 
 	value := rand.float32_range(PITCH_LOWER_LIMIT, PITCH_UPPER_LIMIT)
-	fmt.println(value)
 	rl.SetSoundPitch(sound, value)
 
 	rl.PlaySound(sound)
