@@ -3,6 +3,7 @@ package plug
 import "core:log"
 import "core:math/rand"
 
+// TODO: gradually increase speed
 // TODO: conuter clockwise rotation
 // TODO: falling with S key
 // TODO: some tetrominos rotate incorrectly
@@ -12,10 +13,15 @@ import "core:math/rand"
 import "base:runtime"
 import rl "vendor:raylib"
 
+UPDATES_PER_SECOND :: 60.0
+FIXED_DT :: 1.0 / UPDATES_PER_SECOND
+MAX_FRAME_TIME :: 0.25
+
 GAME_VERSION :: "v0.2"
 
 TETROMINO_SIDE :: 4
-TETROMINO_LOCK_DELAY :: 0.025
+TETROMINO_LOCK_DELAY :: 0.5
+INITIAL_GRAIVTY :: 0.8
 
 IMAGE_SOURCE_SIZE :: 8
 IMAGE_SPRITE_SCALE :: 4
@@ -100,7 +106,8 @@ Game_State :: struct {
 	active_move_timer:  f32,
 	has_lost:           bool,
 	locking_timer:      f32,
-	sounds:        [len(sound_waves)]rl.Sound,
+	accumulator:        f32,
+	sounds:             [len(sound_waves)]rl.Sound,
 }
 
 
@@ -195,6 +202,10 @@ game_update :: proc(state: rawptr, ctx: runtime.Context) {
 	context = ctx
 	game_state := cast(^Game_State)state
 
+	frame_time := rl.GetFrameTime()
+	frame_time = min(frame_time, MAX_FRAME_TIME)
+	game_state.accumulator += frame_time
+
 	when DEBUG_BUILD do if rl.IsKeyPressed(.R) do reset_game(game_state)
 	when DEBUG_BUILD do if rl.IsKeyPressed(.F1) do set_midgame_state(game_state)
 
@@ -203,11 +214,15 @@ game_update :: proc(state: rawptr, ctx: runtime.Context) {
 		return
 	}
 
-	clear_lines(game_state)
 	update_movement_input(game_state)
 	update_drop_input(game_state)
 	update_rotation_input(game_state)
-	update_active_tetromino(game_state)
+
+	for game_state.accumulator >= FIXED_DT {
+		update_active_tetromino(game_state)
+		clear_lines(game_state)
+		game_state.accumulator -= FIXED_DT
+	}
 }
 
 is_valid_position :: proc(game_state: ^Game_State, target_x: i32, target_y: i32) -> bool {
@@ -338,7 +353,7 @@ game_draw :: proc(state: rawptr, ctx: runtime.Context) {
 		game_state.debug_font,
 		"DEVELOPMENT_BUILD",
 		rl.Vector2{10, 10 + game_state.debug_font_size},
-        game_state.debug_font_size,
+		game_state.debug_font_size,
 		game_state.debug_font_spacing,
 		rl.WHITE,
 	)
@@ -545,28 +560,32 @@ lock_active_tetromino :: proc(game_state: ^Game_State) {
 }
 
 update_active_tetromino :: proc(game_state: ^Game_State) {
-	if game_state.active_move_timer < game_state.active_move_delay {
-		game_state.active_move_timer += rl.GetFrameTime()
-		return
-	}
-	game_state.active_move_timer = 0
+    target_y := game_state.active_y + 1
+    is_touching_floor := !is_valid_position(game_state, game_state.active_x, target_y)
 
-	target_y := game_state.active_y + 1
+    if is_touching_floor {
+        game_state.locking_timer += FIXED_DT
+        
+        if game_state.locking_timer >= TETROMINO_LOCK_DELAY {
+            game_state.locking_timer = 0
+            lock_active_tetromino(game_state)
+            play_random_fall_sound(game_state)
+            spawn_tetromino(game_state, rand.choice_enum(Tetromino_Shape))
+            return
+        }
+    } else {
+        game_state.locking_timer = 0 
+    }
 
-	if is_valid_position(game_state, game_state.active_x, target_y) {
-		game_state.active_y = target_y
-		return
-	}
+    game_state.active_move_timer += FIXED_DT
+    
+    if game_state.active_move_timer >= game_state.active_move_delay {
+        game_state.active_move_timer -= game_state.active_move_delay
 
-	if game_state.locking_timer < TETROMINO_LOCK_DELAY {
-		game_state.locking_timer += rl.GetFrameTime()
-		return
-	}
-
-	game_state.locking_timer = 0
-	lock_active_tetromino(game_state)
-	play_random_fall_sound(game_state)
-	spawn_tetromino(game_state, rand.choice_enum(Tetromino_Shape))
+        if !is_touching_floor {
+            game_state.active_y = target_y
+        }
+    }
 }
 
 spawn_tetromino :: proc(game_state: ^Game_State, shape: Tetromino_Shape) {
@@ -599,7 +618,6 @@ draw_atlas_texture :: proc(
 	)
 }
 
-
 set_midgame_state :: proc(game_state: ^Game_State) {
 	game_state.debug_font_size = 32
 	game_state.debug_font_spacing = 2
@@ -611,7 +629,7 @@ set_midgame_state :: proc(game_state: ^Game_State) {
 	game_state.level = 1
 	game_state.lines = 0
 
-	game_state.active_move_delay = 0.001
+	game_state.active_move_delay = INITIAL_GRAIVTY
 	game_state.active_move_timer = 0
 
 	game_state.has_lost = false
@@ -684,14 +702,13 @@ reset_game :: proc(game_state: ^Game_State) {
 
 	game_state.font_size = 32
 	game_state.font_spacing = 2
+	game_state.accumulator = 0
 
 	game_state.score = 0
 	game_state.level = 1
 	game_state.lines = 0
 
-	// TODO: gradually increase speed
-	// game_state.active_move_delay = 0.001
-	game_state.active_move_delay = 0.1
+	game_state.active_move_delay = INITIAL_GRAIVTY
 	game_state.active_move_timer = 0
 
 	game_state.has_lost = false
