@@ -32,6 +32,10 @@ ROWS_COUNT :: 20
 GAME_WIDTH :: 1920
 GAME_HEIGHT :: 1080
 
+PITCH_LOWER_LIMIT :: 0.8
+PITCH_DEFAULT :: 1.0
+PITCH_UPPER_LIMIT :: 1.2
+
 BACKGROUND_COLOR :: rl.Color{34, 35, 35, 255}
 
 DEBUG_BUILD :: #config(DEBUG_BUILD, false)
@@ -175,7 +179,15 @@ game_init :: proc(state: ^rawptr, ctx: runtime.Context) {
 }
 
 play_random_fall_sound :: proc(game_state: ^Game_State) {
-	rl.PlaySound(rand.choice(game_state.fall_sounds[:]))
+	sound := game_state.fall_sounds[2]
+
+    value := rand.float32_range(PITCH_LOWER_LIMIT, PITCH_UPPER_LIMIT)
+    fmt.println(value)
+	rl.SetSoundPitch(sound, value)
+
+	rl.PlaySound(sound)
+
+	rl.SetSoundPitch(sound, PITCH_DEFAULT)
 }
 
 @(export)
