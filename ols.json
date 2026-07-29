@@ -1,0 +1,10 @@
+
+{
+    "$schema": "https://githubusercontent.com",
+    "collections": [
+        {
+            "name": "game",
+            "path": "plug"
+        }
+    ]
+}

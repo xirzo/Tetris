@@ -120,6 +120,8 @@ Game_State :: struct {
 	music:              rl.Music,
 }
 
+// trigger_camera_shake()
+
 @(export)
 game_init :: proc(state: ^rawptr, ctx: runtime.Context) {
 	context = ctx
