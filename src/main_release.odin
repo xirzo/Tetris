@@ -1,9 +1,13 @@
 package main
 
+import "core:log"
 import pl "plug"
 import rl "vendor:raylib"
 
 main :: proc() {
+    context.logger = log.create_console_logger()
+    defer log.destroy_console_logger(context.logger)
+
 	rl.SetTraceLogLevel(rl.TraceLogLevel.WARNING)
 	rl.SetConfigFlags({.WINDOW_RESIZABLE, .VSYNC_HINT})
 

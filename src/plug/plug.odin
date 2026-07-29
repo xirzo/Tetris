@@ -3,6 +3,8 @@ package plug
 import "core:log"
 import "core:math/rand"
 
+// FIX: when dropping with space, dropped tetromino does not get removed with
+// lines
 // TODO: gradually increase speed
 // TODO: conuter clockwise rotation
 // TODO: falling with S key

@@ -13,6 +13,8 @@ FUNCTIONS_PREFIX :: "game_"
 PLUG_SOURCE_PATH :: "src/plug/plug.odin"
 
 main :: proc() {
+    context.logger = log.create_console_logger()
+    defer log.destroy_console_logger(context.logger)
 	plug: Plug
 
 	if !plug_load(&plug, PLUG_SOURCE_PATH) do os.exit(1)
