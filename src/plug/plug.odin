@@ -1,5 +1,6 @@
 package plug
 
+import "core:log"
 import "core:math/rand"
 
 // TODO: conuter clockwise rotation
@@ -9,7 +10,6 @@ import "core:math/rand"
 // TODO: do not spawn tetromino after losing (locking the top shelf)
 
 import "base:runtime"
-import "core:fmt"
 import rl "vendor:raylib"
 
 GAME_VERSION :: "v0.2"
@@ -100,11 +100,11 @@ Game_State :: struct {
 	active_move_timer:  f32,
 	has_lost:           bool,
 	locking_timer:      f32,
-	fall_sounds:        [len(fall_waves)]rl.Sound,
+	sounds:        [len(sound_waves)]rl.Sound,
 }
 
 
-fall_waves := [?]rl.Wave {
+sound_waves := [?]rl.Wave {
 	rl.LoadWaveFromMemory(
 		".wav",
 		raw_data(TETROMINO_FALL_SOUND_1_BYTES),
@@ -125,10 +125,10 @@ fall_waves := [?]rl.Wave {
 @(export)
 game_init :: proc(state: ^rawptr, ctx: runtime.Context) {
 	context = ctx
-	fmt.println("[plug] init")
+	log.info("[plug] init")
 
 	if state^ != nil {
-		fmt.println("[plug] memory already allocated, skipping...")
+		log.info("[plug] memory already allocated, skipping...")
 		return
 	}
 
@@ -138,14 +138,14 @@ game_init :: proc(state: ^rawptr, ctx: runtime.Context) {
 
 	atlas_img := rl.LoadImageFromMemory(".png", raw_data(ATLAS_BYTES), cast(i32)len(ATLAS_BYTES))
 	if atlas_img.data == nil {
-		fmt.eprintln("[plug] failed to load atlas texture from memory")
+		log.error("[plug] failed to load atlas texture from memory")
 		return
 	}
 
 	atlas := rl.LoadTextureFromImage(atlas_img)
 	rl.UnloadImage(atlas_img)
 	if atlas.id <= 0 {
-		fmt.eprintln("[plug] failed to load atlas texture")
+		log.error("[plug] failed to load atlas texture")
 		return
 	}
 
@@ -170,17 +170,17 @@ game_init :: proc(state: ^rawptr, ctx: runtime.Context) {
 	game_state.atlas = atlas
 	game_state.target_texture = rl.LoadRenderTexture(GAME_WIDTH, GAME_HEIGHT)
 
-	for wave, i in fall_waves {
-		game_state.fall_sounds[i] = rl.LoadSoundFromWave(wave)
+	for wave, i in sound_waves {
+		game_state.sounds[i] = rl.LoadSoundFromWave(wave)
 		rl.UnloadWave(wave)
 	}
 
 	state^ = game_state
-	fmt.println("[plug] allocated game_state")
+	log.info("[plug] allocated game_state")
 }
 
 play_random_fall_sound :: proc(game_state: ^Game_State) {
-	sound := game_state.fall_sounds[2]
+	sound := game_state.sounds[2]
 
 	value := rand.float32_range(PITCH_LOWER_LIMIT, PITCH_UPPER_LIMIT)
 	rl.SetSoundPitch(sound, value)
@@ -408,14 +408,14 @@ game_deinit :: proc(state: ^rawptr, ctx: runtime.Context) {
 	context = ctx
 	game_state := cast(^Game_State)(state^)
 
-	fmt.println("[plug] deinit")
+	log.info("[plug] deinit")
 }
 
 @(export)
 game_shutdown :: proc(state: ^rawptr, ctx: runtime.Context) {
 	context = ctx
 	if state^ == nil {
-		fmt.println("[plug] state is already null, while shutting down, skipping...")
+		log.info("[plug] state is already null, while shutting down, skipping...")
 		return
 	}
 
@@ -426,11 +426,11 @@ game_shutdown :: proc(state: ^rawptr, ctx: runtime.Context) {
 	rl.UnloadFont(game_state.debug_font)
 	rl.UnloadFont(game_state.font)
 
-	for fall_sound in game_state.fall_sounds {
+	for fall_sound in game_state.sounds {
 		rl.UnloadSound(fall_sound)
 	}
 
-	fmt.println("[plug] full shutdown complete")
+	log.info("[plug] full shutdown complete")
 }
 
 

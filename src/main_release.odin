@@ -5,14 +5,13 @@ import rl "vendor:raylib"
 
 main :: proc() {
 	rl.SetTraceLogLevel(rl.TraceLogLevel.WARNING)
-	rl.SetConfigFlags({.WINDOW_RESIZABLE})
+	rl.SetConfigFlags({.WINDOW_RESIZABLE, .VSYNC_HINT})
 
 	rl.InitWindow(1920 / 2, 1080 / 2, "Tetris")
 	defer rl.CloseWindow()
 
-	rl.SetTargetFPS(60)
-    rl.InitAudioDevice()
-    defer rl.CloseAudioDevice()
+	rl.InitAudioDevice()
+	defer rl.CloseAudioDevice()
 
 	state: rawptr = nil
 
@@ -23,5 +22,6 @@ main :: proc() {
 		pl.game_draw(state, context)
 	}
 
-    pl.game_shutdown(&state, context)
+	pl.game_shutdown(&state, context)
+    free(state)
 }

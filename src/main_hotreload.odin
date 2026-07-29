@@ -1,8 +1,8 @@
 package main
 
+import "core:log"
 import "base:runtime"
 import "core:dynlib"
-import "core:fmt"
 import "core:os"
 import "core:strings"
 
@@ -14,51 +14,37 @@ PLUG_SOURCE_PATH :: "src/plug/plug.odin"
 
 main :: proc() {
 	plug: Plug
-	state: rawptr = nil
 
 	if !plug_load(&plug, PLUG_SOURCE_PATH) do os.exit(1)
 	defer plug_unload(&plug)
 
 	rl.SetTraceLogLevel(rl.TraceLogLevel.WARNING)
-	rl.SetConfigFlags({.WINDOW_RESIZABLE})
+	rl.SetConfigFlags({.WINDOW_RESIZABLE, .VSYNC_HINT})
 	rl.InitWindow(1920 / 2, 1080 / 2, "Tetris")
 	defer rl.CloseWindow()
-	rl.SetTargetFPS(60)
-    rl.InitAudioDevice()
-    defer rl.CloseAudioDevice()
+	rl.InitAudioDevice()
+	defer rl.CloseAudioDevice()
 
+	state: rawptr = nil
 	plug.init(&state, context)
 
 	defer {
 		plug.shutdown(&state, context)
 		if state != nil {
-			fmt.println("[main] freeing game memory...")
+			log.info("[main] freeing game memory...")
 			free(state)
 		}
 	}
 
-	// last_write_time, err := os.last_write_time_by_name(PLUG_SOURCE_PATH)
-	// if err != os.ERROR_NONE {
-	// 	fmt.eprintfln("[main] [warn] could not get initial write time: %v", err)
-	// }
-
-	// fmt.println("[main] starting main loop. edit plug.odin to trigger a reload...")
-
 	for !rl.WindowShouldClose() {
-		// current_write_time, check_err := os.last_write_time_by_name(PLUG_SOURCE_PATH)
-		// if check_err == os.ERROR_NONE && time.diff(last_write_time,
-		// current_write_time) > 0|| rl.IsKeyPressed(rl.KeyboardKey.SPACE) {
-
 		if rl.IsKeyPressed(rl.KeyboardKey.G) {
-			fmt.println("[main] changes detected! recompiling...")
+			log.info("[main] changes detected! recompiling...")
 
 			plug.deinit(&state, context)
 
 			if !plug_reload(&plug, PLUG_SOURCE_PATH) do os.exit(1)
 
 			plug.init(&state, context)
-
-			// last_write_time = current_write_time
 		}
 
 		plug.update(state, context)
@@ -86,11 +72,11 @@ plug_load :: proc(plug: ^Plug, plug_source_file_path: string = "plug.odin") -> b
 		symbol_prefix = FUNCTIONS_PREFIX,
 	)
 	if !ok {
-		fmt.eprintfln("failed to load the plug, error: %v", dynlib.last_error())
+		log.errorf("failed to load the plug, error: %v", dynlib.last_error())
 		return false
 	}
 
-	fmt.printfln("[hotreload] successfully loaded the plug, elements count: %i", count)
+	log.info("[hotreload] successfully loaded the plug, elements count: %i", count)
 	return true
 }
 
@@ -111,7 +97,7 @@ plug_unload :: proc(plug: ^Plug) {
 	}
 
 	if !dynlib.unload_library(plug.handle) {
-		fmt.eprintfln("[hotreload] failed to unload the plug, error: %v", dynlib.last_error())
+		log.errorf("[hotreload] failed to unload the plug, error: %v", dynlib.last_error())
 	}
 
 	plug.handle = nil
@@ -126,7 +112,7 @@ plug_unload :: proc(plug: ^Plug) {
 plug_build :: proc(plug_source_file_path: string, output_file_path: string) -> bool {
 	out_argument, alloc_err := strings.concatenate([]string{"-out:", output_file_path})
 	if alloc_err != runtime.Allocator_Error.None {
-		fmt.eprintfln("[hotreload] failed to allocate out argument, error: %v", alloc_err)
+		log.errorf("[hotreload] failed to allocate out argument, error: %v", alloc_err)
 		return false
 	}
 	defer delete(out_argument)
@@ -148,8 +134,8 @@ plug_build :: proc(plug_source_file_path: string, output_file_path: string) -> b
 	)
 
 	if state.exit_code != 0 {
-		fmt.eprintfln("[hotreload] failed to build the plug, error code: %i", state.exit_code)
-		fmt.eprintfln("%s", stderr)
+		log.errorf("[hotreload] failed to build the plug, error code: %i", state.exit_code)
+		log.errorf("%s", stderr)
 		return false
 	}
 
