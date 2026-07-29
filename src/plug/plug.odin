@@ -1,7 +1,11 @@
 package plug
 
 import "core:math/rand"
+import "core:time"
 
+// TODO: conuter clockwise rotation
+// TODO: falling with S key
+// TODO: some tetrominos rotate incorrectly
 // TODO: add sounds
 // TODO: do not spawn tetromino after losing (locking the top shelf)
 
@@ -18,6 +22,9 @@ IMAGE_DEST_SIZE :: IMAGE_SOURCE_SIZE * IMAGE_SPRITE_SCALE
 
 ATLAS_BYTES :: #load("../../assets/atlas.png")
 FONT_BYTES :: #load("../../assets/vcr_osd_mono.ttf")
+TETROMINO_FALL_SOUND_1_BYTES :: #load("../../assets/tetromino_fell_1.wav")
+TETROMINO_FALL_SOUND_2_BYTES :: #load("../../assets/tetromino_fell_2.wav")
+TETROMINO_FALL_SOUND_3_BYTES :: #load("../../assets/tetromino_fell_3.wav")
 
 COLS_COUNT :: 10
 ROWS_COUNT :: 20
@@ -88,6 +95,26 @@ Game_State :: struct {
 	active_move_timer:  f32,
 	has_lost:           bool,
 	locking_timer:      f32,
+	fall_sounds:        [len(fall_waves)]rl.Sound,
+}
+
+
+fall_waves := [?]rl.Wave {
+	rl.LoadWaveFromMemory(
+		".wav",
+		raw_data(TETROMINO_FALL_SOUND_1_BYTES),
+		cast(i32)len(TETROMINO_FALL_SOUND_1_BYTES),
+	),
+	rl.LoadWaveFromMemory(
+		".wav",
+		raw_data(TETROMINO_FALL_SOUND_2_BYTES),
+		cast(i32)len(TETROMINO_FALL_SOUND_2_BYTES),
+	),
+	rl.LoadWaveFromMemory(
+		".wav",
+		raw_data(TETROMINO_FALL_SOUND_3_BYTES),
+		cast(i32)len(TETROMINO_FALL_SOUND_3_BYTES),
+	),
 }
 
 @(export)
@@ -138,8 +165,17 @@ game_init :: proc(state: ^rawptr, ctx: runtime.Context) {
 	game_state.atlas = atlas
 	game_state.target_texture = rl.LoadRenderTexture(GAME_WIDTH, GAME_HEIGHT)
 
+	for wave, i in fall_waves {
+		game_state.fall_sounds[i] = rl.LoadSoundFromWave(wave)
+		rl.UnloadWave(wave)
+	}
+
 	state^ = game_state
 	fmt.println("[plug] allocated game_state")
+}
+
+play_random_fall_sound :: proc(game_state: ^Game_State) {
+	rl.PlaySound(rand.choice(game_state.fall_sounds[:]))
 }
 
 @(export)
@@ -201,9 +237,9 @@ drop_active_tetromino :: proc(game_state: ^Game_State) {
 
 	game_state.active_y = target_y
 
-    lock_active_tetromino(game_state)
-    clear_lines(game_state)
-    game_state.locking_timer = 0
+	lock_active_tetromino(game_state)
+	clear_lines(game_state)
+	game_state.locking_timer = 0
 }
 
 update_drop_input :: proc(game_state: ^Game_State) {
@@ -368,6 +404,10 @@ game_shutdown :: proc(state: ^rawptr, ctx: runtime.Context) {
 	rl.UnloadFont(game_state.debug_font)
 	rl.UnloadFont(game_state.font)
 
+	for fall_sound in game_state.fall_sounds {
+		rl.UnloadSound(fall_sound)
+	}
+
 	fmt.println("[plug] full shutdown complete")
 }
 
@@ -503,8 +543,8 @@ update_active_tetromino :: proc(game_state: ^Game_State) {
 
 	game_state.locking_timer = 0
 	lock_active_tetromino(game_state)
+	play_random_fall_sound(game_state)
 	spawn_tetromino(game_state, rand.choice_enum(Tetromino_Shape))
-
 }
 
 spawn_tetromino :: proc(game_state: ^Game_State, shape: Tetromino_Shape) {
