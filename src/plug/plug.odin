@@ -13,6 +13,8 @@ import "base:runtime"
 import "core:fmt"
 import rl "vendor:raylib"
 
+GAME_VERSION :: "v0.1"
+
 TETROMINO_SIDE :: 4
 TETROMINO_LOCK_DELAY :: 0.025
 
@@ -181,8 +183,8 @@ game_init :: proc(state: ^rawptr, ctx: runtime.Context) {
 play_random_fall_sound :: proc(game_state: ^Game_State) {
 	sound := game_state.fall_sounds[2]
 
-    value := rand.float32_range(PITCH_LOWER_LIMIT, PITCH_UPPER_LIMIT)
-    fmt.println(value)
+	value := rand.float32_range(PITCH_LOWER_LIMIT, PITCH_UPPER_LIMIT)
+	fmt.println(value)
 	rl.SetSoundPitch(sound, value)
 
 	rl.PlaySound(sound)
@@ -324,9 +326,10 @@ game_draw :: proc(state: rawptr, ctx: runtime.Context) {
 	draw_grid(game_state)
 
 	draw_game_info(game_state, rl.Vector2{GAME_WIDTH * 0.3, GAME_HEIGHT * 0.55})
-	when DEBUG_BUILD do rl.DrawTextEx(
+
+	rl.DrawTextEx(
 		game_state.debug_font,
-		"DEVELOPMENT_BUILD",
+		"GAME_VERSION: " + GAME_VERSION,
 		rl.Vector2{10, 10},
 		game_state.debug_font_size,
 		game_state.debug_font_spacing,
@@ -335,16 +338,16 @@ game_draw :: proc(state: rawptr, ctx: runtime.Context) {
 
 	when DEBUG_BUILD do rl.DrawTextEx(
 		game_state.debug_font,
-		rl.TextFormat("HAS_LOST: %s", game_state.has_lost ? "TRUE" : "FALSE"),
+		"DEVELOPMENT_BUILD",
 		rl.Vector2{10, 10 + game_state.debug_font_size},
-		game_state.debug_font_size,
+        game_state.debug_font_size,
 		game_state.debug_font_spacing,
 		rl.WHITE,
 	)
 
 	when DEBUG_BUILD do rl.DrawTextEx(
 		game_state.debug_font,
-		"PRESS R TO RESTART",
+		rl.TextFormat("HAS_LOST: %s", game_state.has_lost ? "TRUE" : "FALSE"),
 		rl.Vector2{10, 10 + 2 * game_state.debug_font_size},
 		game_state.debug_font_size,
 		game_state.debug_font_spacing,
@@ -353,8 +356,17 @@ game_draw :: proc(state: rawptr, ctx: runtime.Context) {
 
 	when DEBUG_BUILD do rl.DrawTextEx(
 		game_state.debug_font,
-		"PRESS F1 TO SET MIDGAME",
+		"PRESS R TO RESTART",
 		rl.Vector2{10, 10 + 3 * game_state.debug_font_size},
+		game_state.debug_font_size,
+		game_state.debug_font_spacing,
+		rl.WHITE,
+	)
+
+	when DEBUG_BUILD do rl.DrawTextEx(
+		game_state.debug_font,
+		"PRESS F1 TO SET MIDGAME",
+		rl.Vector2{10, 10 + 4 * game_state.debug_font_size},
 		game_state.debug_font_size,
 		game_state.debug_font_spacing,
 		rl.WHITE,

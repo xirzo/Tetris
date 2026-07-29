@@ -1,0 +1,66 @@
+name: Build
+on: 
+  push:
+    branches: [ main ]
+  workflow_dispatch:
+
+jobs:
+  build:
+    strategy:
+      matrix:
+        os: [ubuntu-latest, windows-latest, macos-latest]
+    
+    runs-on: ${{ matrix.os }}
+    
+    steps:
+      - uses: actions/checkout@v4
+      
+      - name: Install Linux Dependencies
+        if: runner.os == 'Linux'
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y libx11-dev libxrandr-dev libxinerama-dev libxcursor-dev libxi-dev libgl1-mesa-dev libglu1-mesa-dev libasound2-dev
+      
+      - name: Setup Odin
+        uses: laytan/setup-odin@v2
+        with:
+          version: "latest"
+
+      - name: Build Game (Windows)
+        if: runner.os == 'Windows'
+        run: odin build src/main_release.odin -file -out:x86_64-windows-tetris.exe -target:windows_amd64
+        
+      - name: Upload Windows Artifact
+        if: runner.os == 'Windows'
+        uses: actions/upload-artifact@v4
+        with:
+          name: windows-build
+          path: x86_64-windows-tetris.exe
+
+      - name: Build Game (Linux)
+        if: runner.os == 'Linux'
+        run: odin build src/main_release.odin -file -out:x86_64-linux-tetris -target:linux_amd64
+        
+      - name: Upload Linux Artifact
+        if: runner.os == 'Linux'
+        uses: actions/upload-artifact@v4
+        with:
+          name: linux-build
+          path: x86_64-linux-tetris
+
+      - name: Build Game (macOS Apple Silicon)
+        if: runner.os == 'macOS'
+        run: odin build src/main_release.odin -file -out:arm64-macos-tetris -target:darwin_arm64
+        
+      - name: Build Game (macOS Intel)
+        if: runner.os == 'macOS'
+        run: odin build src/main_release.odin -file -out:x86_64-macos-tetris -target:darwin_amd64
+
+      - name: Upload macOS Artifacts
+        if: runner.os == 'macOS'
+        uses: actions/upload-artifact@v4
+        with:
+          name: mac-builds
+          path: |
+            arm64-macos-tetris
+            x86_64-macos-tetris
