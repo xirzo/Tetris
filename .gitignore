@@ -1,7 +1,9 @@
 
 # Binaries
-x86_64_linux_tetris
-x86_64_windows_tetris
+x86_64-linux-tetris
+x86_64-windows-tetris
+x86_64-macos-tetris
+arch64-macos-tetris
 
 # Vim
 *.swp

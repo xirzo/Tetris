@@ -1,0 +1,3 @@
+[submodule "src/odin-fsw"]
+	path = src/odin-fsw
+	url = https://github.com/thetarnav/odin-fsw.git
