@@ -26,7 +26,9 @@ jobs:
       - name: Setup Odin
         uses: laytan/setup-odin@v2
         with:
-          version: "latest"
+          token: ${{ secrets.GITHUB_TOKEN }}
+          release: latest
+          llvm-version: 20
 
       - name: Build Game (Windows)
         if: runner.os == 'Windows'
