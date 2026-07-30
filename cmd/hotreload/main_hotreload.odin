@@ -6,11 +6,13 @@ import "core:dynlib"
 import "core:os"
 import "core:strings"
 
+import fsw "game:odin-fsw"
 import rl "vendor:raylib"
 
 OUTPUT_FILE_PATH :: "plug.so"
 FUNCTIONS_PREFIX :: "game_"
-PLUG_SOURCE_PATH :: "plug/plug.odin"
+PLUG_SOURCE_PATH :: "plug/"
+ASSETS_PATH :: "assets/"
 
 main :: proc() {
     context.logger = log.create_console_logger()
@@ -38,13 +40,53 @@ main :: proc() {
 		}
 	}
 
+	w, w_err := fsw.watch_dir_recursive(PLUG_SOURCE_PATH)
+	assert(w_err == nil)
+	defer fsw.destroy(w)
+
+	aw, aw_err := fsw.watch_dir_recursive(ASSETS_PATH)
+	assert(aw_err == nil)
+	defer fsw.destroy(aw)
+
 	for !rl.WindowShouldClose() {
-		if rl.IsKeyPressed(rl.KeyboardKey.G) {
-			log.info("[main] changes detected! recompiling...")
+		src_events := fsw.get_events(&w)
+		defer fsw.delete_events(src_events)
+
+		assets_events := fsw.get_events(&aw)
+		defer fsw.delete_events(assets_events)
+
+		has_been_modified := false
+
+		for event in src_events {
+			if !strings.ends_with(event.path, ".odin") {
+				continue
+			}
+
+			if event.kind == .Modified {
+				has_been_modified = true
+				break
+			}
+		}
+
+		for event in assets_events {
+			if event.kind == .Modified {
+				has_been_modified = true
+				break
+			}
+		}
+
+		if rl.IsKeyPressed(rl.KeyboardKey.G) do has_been_modified = true
+
+		if has_been_modified {
+			log.info("recompile triggered")
 
 			plug.deinit(&state, context)
 
-			if !plug_reload(&plug, PLUG_SOURCE_PATH) do os.exit(1)
+			if try_plug_reload(&plug, PLUG_SOURCE_PATH) {
+				log.info("plug reloaded successfully")
+			} else {
+				log.error("plug reload failed, keeping current version")
+			}
 
 			plug.init(&state, context)
 		}
@@ -83,7 +125,7 @@ plug_load :: proc(plug: ^Plug, plug_source_file_path: string = "plug.odin") -> b
 }
 
 
-plug_reload :: proc(plug: ^Plug, plug_source_file_path: string = "plug.odin") -> bool {
+try_plug_reload :: proc(plug: ^Plug, plug_source_file_path: string = "plug.odin") -> bool {
 	if !plug_build(plug_source_file_path, OUTPUT_FILE_PATH) {
 		return false
 	}
