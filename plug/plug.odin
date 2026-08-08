@@ -5,8 +5,6 @@ import "core:math/rand"
 
 // TODO: test each tetromino rotation
 
-// FIX: when dropping with space, dropped tetromino does not get removed with
-// lines
 // TODO: gradually increase speed
 // TODO: conuter clockwise rotation
 // TODO: falling with S key
@@ -28,6 +26,7 @@ GAME_VERSION :: "v0.3"
 TETROMINO_SIDE :: 4
 TETROMINO_LOCK_DELAY :: 0.5
 INITIAL_GRAIVTY :: 0.8
+GRAVITY_INCREASE_RATE :: 0.001
 
 IMAGE_SOURCE_SIZE :: 8
 IMAGE_SPRITE_SCALE :: 4
@@ -118,6 +117,7 @@ Game_State :: struct {
 	accumulator:        f32,
 	sounds:             [SOUNDS_COUNT]rl.Sound,
 	music:              rl.Music,
+    was_drop_pressed:   bool,
 }
 
 @(export)
@@ -244,7 +244,14 @@ game_update :: proc(state: rawptr, ctx: runtime.Context) {
 	rl.UpdateMusicStream(game_state.music)
 
 	for game_state.accumulator >= FIXED_DT {
+        game_state.active_move_delay -= FIXED_DT * GRAVITY_INCREASE_RATE
 		update_active_tetromino(game_state)
+
+        if game_state.was_drop_pressed {
+            drop_active_tetromino(game_state)
+            game_state.was_drop_pressed = false
+        }
+
 		clear_lines(game_state)
 		game_state.accumulator -= FIXED_DT
 	}
@@ -273,29 +280,32 @@ is_valid_position :: proc(game_state: ^Game_State, target_x: i32, target_y: i32)
 }
 
 drop_active_tetromino :: proc(game_state: ^Game_State) {
-	target_y := game_state.active_y
+    target_y := game_state.active_y
 
-	if target_y == ROWS_COUNT {
-		return
-	}
+    if target_y == ROWS_COUNT {
+        return
+    }
 
-	for {
-		if !is_valid_position(game_state, game_state.active_x, target_y + 1) {
-			break
-		}
+    for {
+        if !is_valid_position(game_state, game_state.active_x, target_y + 1) {
+            break
+        }
 
-		target_y += 1
-	}
+        target_y += 1
+    }
 
-	game_state.active_y = target_y
+    game_state.active_y = target_y
 
-	lock_active_tetromino(game_state)
-	clear_lines(game_state)
-	game_state.locking_timer = 0
+    lock_active_tetromino(game_state)
+    clear_lines(game_state)
+    
+    spawn_tetromino(game_state, rand.choice_enum(Tetromino_Shape)) 
+    
+    game_state.locking_timer = 0
 }
 
 update_drop_input :: proc(game_state: ^Game_State) {
-	if rl.IsKeyPressed(.SPACE) do drop_active_tetromino(game_state)
+	if rl.IsKeyPressed(.SPACE) do game_state.was_drop_pressed = true
 }
 
 update_movement_input :: proc(game_state: ^Game_State) {

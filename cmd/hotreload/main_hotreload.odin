@@ -137,7 +137,7 @@ plug_build :: proc(plug_source_file_path: string, output_file_path: string) -> b
 
 	if state.exit_code != 0 {
 		log.errorf("[hotreload] failed to build the plug, error code: %i", state.exit_code)
-		log.errorf("%s", stderr)
+		log.errorf("\n\n%s", stderr)
 		return false
 	}
 
