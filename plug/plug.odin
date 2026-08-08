@@ -3,13 +3,12 @@ package plug
 import "core:log"
 import "core:math/rand"
 
-// TODO: test each tetromino rotation
+// FIX: delay after music ending
+// TODO: add more sounds
 
-// TODO: gradually increase speed
 // TODO: conuter clockwise rotation
 // TODO: falling with S key
 // TODO: some tetrominos rotate incorrectly
-// TODO: add sounds
 // TODO: do not spawn tetromino after losing (locking the top shelf)
 
 import "base:runtime"
@@ -332,24 +331,34 @@ update_rotation_input :: proc(game_state: ^Game_State) {
 }
 
 rotate_active_tetromino_clockwise :: proc(game_state: ^Game_State) {
-	transposed := transpose(game_state.active_grid)
+    transposed := transpose(game_state.active_grid)
 
-	rotated: [TETROMINO_SIDE][TETROMINO_SIDE]u8
+    rotated: [TETROMINO_SIDE][TETROMINO_SIDE]u8
 
-	for y in 0 ..< TETROMINO_SIDE {
-		for x in 0 ..< TETROMINO_SIDE {
-			reverse_x := (TETROMINO_SIDE - 1) - x
-			rotated[y][reverse_x] = transposed[y][x]
-		}
-	}
+    for y in 0 ..< TETROMINO_SIDE {
+        for x in 0 ..< TETROMINO_SIDE {
+            reverse_x := (TETROMINO_SIDE - 1) - x
+            rotated[y][reverse_x] = transposed[y][x]
+        }
+    }
 
-	old_grid := game_state.active_grid
+    old_grid := game_state.active_grid
+    game_state.active_grid = rotated
 
-	game_state.active_grid = rotated
+    offsets := [5]i32{0, 1, -1, 2, -2} 
+    kick_successful := false
 
-	if !is_valid_position(game_state, game_state.active_x, game_state.active_y) {
-		game_state.active_grid = old_grid
-	}
+    for offset in offsets {
+        if is_valid_position(game_state, game_state.active_x + offset, game_state.active_y) {
+            game_state.active_x += offset
+            kick_successful = true
+            break
+        }
+    }
+
+    if !kick_successful {
+        game_state.active_grid = old_grid
+    }
 }
 
 transpose :: proc(grid: [TETROMINO_SIDE][TETROMINO_SIDE]u8) -> [TETROMINO_SIDE][TETROMINO_SIDE]u8 {
