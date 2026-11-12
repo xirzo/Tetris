@@ -9,14 +9,14 @@
 ### Development
 
 ```sh
-odin run cmd/hotreload -define:RAYLIB_SHARED=true -sanitize:address
+odin run cmd/hotreload -define:RAYLIB_SHARED=true -debug
 
 ```
 
 ### Release
 
 ```sh
-odin run cmd/release -collection:game=.
+odin run cmd/release -collection:game=. -sanitize:address -debug
 ```
 
 ## Building
@@ -25,6 +25,12 @@ odin run cmd/release -collection:game=.
 
 ```sh
 odin build cmd/release -out:x86_64_linux_tetris -o:speed -collection:game=.
+```
+
+## Testing for leaks
+
+```sh
+odin build cmd/release -collection:game=. -sanitize:address -debug &&  LSAN_OPTIONS=suppressions=./lsan.supp ASAN_OPTIONS=fast_unwind_on_malloc=0 ./release
 ```
 
 ## Issues
